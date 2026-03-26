@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Simulador Pro: Equilibrio Electrostático</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="notificacion-container" class="notificacion-container"></div>
+
+    <div class="contenedor">
+        <header class="header-principal">
+            <div class="header-info">
+                <h1>Simulador de Equilibrio Pro</h1>
+                <p>Laboratorio Virtual de Física Electrostática</p>
+            </div>
+            <div class="header-controles">
+                <div class="dark-mode-switch">
+                    <label class="switch">
+                        <input type="checkbox" id="dark-mode-toggle">
+                        <span class="slider round"></span>
+                    </label>
+                    <span class="switch-text">Modo Oscuro</span>
+                </div>
+            </div>
+        </header>
+
+        <section class="panel-ejemplos">
+            <h2>Laboratorio de Pruebas: Cargar Ejemplos</h2>
+            <div class="grupo-ejemplos">
+                <button onclick="cargarEjemplo(1)" class="btn-ejemplo">Hallar Carga (q)</button>
+                <button onclick="cargarEjemplo(2)" class="btn-ejemplo">Hallar Ángulo (θ)</button>
+                <button onclick="cargarEjemplo(3)" class="btn-ejemplo">Hallar Campo (E)</button>
+            </div>
+        </section>
+
+        <main class="grid-principal">
+            <section class="panel-controles card">
+                <h2>Parámetros del Sistema</h2>
+                
+                <h3 class="subtitulo-seccion">1. Datos Físicos Base</h3>
+                <div class="grupo-input">
+                    <label>Masa (m):</label>
+                    <div class="input-compuesto">
+                        <input type="number" id="masa" step="any" placeholder="Opcional">
+                        <select id="unidad-masa">
+                            <option value="1">kg</option>
+                            <option value="1e-3">g</option>
+                            <option value="1e-6">mg</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="grupo-input">
+                    <label>Ángulo vertical (θ):</label>
+                    <div class="input-compuesto">
+                        <input type="number" id="angulo" step="any" placeholder="Opcional">
+                        <select disabled class="select-readonly"><option>°</option></select>
+                    </div>
+                </div>
+
+                <h3 class="subtitulo-seccion">2. Entorno Eléctrico</h3>
+                <div class="grupo-input">
+                    <label>Campo Eléctrico (E):</label>
+                    <div class="input-compuesto">
+                        <input type="number" id="campo" step="any" placeholder="Opcional">
+                        <select id="unidad-campo">
+                            <option value="1">N/C</option>
+                            <option value="1e3">kN/C</option>
+                            <option value="1e6">MN/C</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="grupo-input">
+                    <label>Carga (q):</label>
+                    <div class="input-compuesto">
+                        <input type="number" id="carga" step="any" placeholder="Opcional">
+                        <select id="unidad-carga">
+                            <option value="1">C</option>
+                            <option value="1e-3">mC</option>
+                            <option value="1e-6" selected>µC</option>
+                            <option value="1e-9">nC</option>
+                        </select>
+                    </div>
+                </div>
+
+                <h3 class="subtitulo-seccion">3. Dinámica y Fuerzas</h3>
+                <div class="grupo-input">
+                    <label>Peso (W):</label>
+                    <div class="input-compuesto">
+                        <input type="number" id="peso" step="any" placeholder="Opcional">
+                        <select id="unidad-peso"><option value="1">N</option></select>
+                    </div>
+                </div>
+                <div class="grupo-input">
+                    <label>Tensión (T):</label>
+                    <div class="input-compuesto">
+                        <input type="number" id="tension" step="any" placeholder="Opcional">
+                        <select id="unidad-tension"><option value="1">N</option></select>
+                    </div>
+                </div>
+                <div class="grupo-input">
+                    <label>Fuerza Eléctrica (Fe):</label>
+                    <div class="input-compuesto">
+                        <input type="number" id="fuerza" step="any" placeholder="Opcional">
+                        <select id="unidad-fuerza"><option value="1">N</option></select>
+                    </div>
+                </div>
+                
+                <div class="acciones">
+                    <button onclick="ejecutarSimulacion()" class="btn-calcular">Resolver</button>
+                    <button onclick="limpiarTodo()" class="btn-limpiar">Limpiar</button>
+                </div>
+            </section>
+
+            <section class="panel-resultados card">
+                <h2>Procedimiento Matemático</h2>
+                <div id="consola-pasos" class="consola">Esperando datos... Ingresa al menos 3 parámetros.</div>
+            </section>
+
+            <section class="panel-grafico card">
+                <h2>Diagrama de Cuerpo Libre</h2>
+                <div class="canvas-wrapper">
+                    <canvas id="lienzo"></canvas>
+                </div>
+            </section>
+
+            <section class="panel-historial card">
+                <div class="header-historial">
+                    <h2>Historial</h2>
+                    <button onclick="limpiarHistorial()" class="btn-borrar-historial">Borrar</button>
+                </div>
+                <div class="tabla-contenedor">
+                    <table id="tabla-resultados">
+                        <thead>
+                            <tr>
+                                <th>Masa(kg)</th><th>θ</th><th>E(N/C)</th>
+                                <th>q(C)</th><th>T(N)</th><th>Fe(N)</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>

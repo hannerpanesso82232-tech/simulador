@@ -1,0 +1,306 @@
+:root {
+    /* Variables de Tema Claro (Defecto) */
+    --primary-color: #0056b3;
+    --primary-hover: #004494;
+    --secondary-color: #6c757d;
+    --secondary-hover: #5a6268;
+    --danger: #dc3545;
+    --danger-hover: #c82333;
+    --info: #17a2b8;
+    
+    --bg-body: #f0f2f5;
+    --bg-card: #ffffff;
+    --text-main: #2c3e50;
+    --text-secondary: #555555;
+    --border-color: #e1e8ed;
+    --input-bg: #ffffff;
+    --select-bg: #f8f9fa;
+    
+    --terminal-bg: #1e1e1e;
+    --terminal-text: #54f542;
+    --terminal-border: var(--primary-color);
+    
+    --canvas-bg: #fafbfc;
+    --canvas-grid: #e1e8ed;
+}
+
+/* Variables de Tema Oscuro */
+[data-theme="dark"] {
+    --bg-body: #121212;
+    --bg-card: #1e1e1e;
+    --text-main: #e0e0e0;
+    --text-secondary: #aaaaaa;
+    --border-color: #333333;
+    --input-bg: #2d2d2d;
+    --select-bg: #333333;
+    
+    --terminal-bg: #000000;
+    --terminal-text: #66ff66;
+    --terminal-border: #007bff;
+    
+    --canvas-bg: #181818;
+    --canvas-grid: #2a2a2a;
+}
+
+* { box-sizing: border-box; font-family: 'Segoe UI', system-ui, sans-serif; transition: background-color 0.3s, color 0.3s; }
+
+body { background-color: var(--bg-body); color: var(--text-main); margin: 0; padding: 10px; padding-bottom: 30px; }
+
+.contenedor { max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; gap: 15px; }
+
+/* --- Barra Superior Responsiva --- */
+header.header-principal { 
+    text-align: center; 
+    padding: 10px; 
+    border-bottom: 2px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+header.header-principal h1 { color: var(--primary-color); margin: 0; font-size: 1.5rem; }
+header.header-principal p { margin: 0; font-size: 0.9rem; color: var(--text-secondary); }
+
+.header-controles { display: flex; align-items: center; justify-content: center; width: 100%; }
+
+/* Switch Modo Oscuro Responsivo */
+.dark-mode-switch { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; font-weight: bold; }
+
+.switch { position: relative; display: inline-block; width: 44px; height: 24px; }
+.switch input { opacity: 0; width: 0; height: 0; }
+.slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; }
+.slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .4s; }
+input:checked + .slider { background-color: var(--primary-color); }
+input:focus + .slider { box-shadow: 0 0 1px var(--primary-color); }
+input:checked + .slider:before { transform: translateX(20px); }
+.slider.round { border-radius: 24px; }
+.slider.round:before { border-radius: 50%; }
+
+/* --- Panel de Ejemplos Responsivo --- */
+.panel-ejemplos { background: var(--bg-card); padding: 15px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+.panel-ejemplos h2 { font-size: 1rem; margin-top: 0; margin-bottom: 10px; color: var(--text-main); text-align: center;}
+.grupo-ejemplos { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+
+button.btn-ejemplo { 
+    background-color: var(--select-bg); 
+    color: var(--primary-color); 
+    border: 1px solid var(--border-color); 
+    padding: 8px 12px; 
+    border-radius: 20px; 
+    font-size: 0.8rem; 
+    cursor: pointer; 
+    font-weight: bold;
+    flex: 1 1 auto; 
+    max-width: 200px;
+    text-align: center;
+}
+
+button.btn-ejemplo:hover { background-color: var(--border-color); transform: translateY(-1px); }
+
+/* --- Grid Principal Responsivo --- */
+.grid-principal { 
+    display: flex;
+    flex-direction: column; 
+    gap: 15px; 
+}
+
+/* Card Estilo */
+.card { 
+    background: var(--bg-card); 
+    padding: 15px; 
+    border-radius: 12px; 
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05); 
+}
+
+h2 { font-size: 1.1rem; border-bottom: 2px solid var(--border-color); padding-bottom: 8px; margin-top: 0; color: var(--text-main);}
+.subtitulo-seccion { font-size: 0.95rem; color: var(--primary-color); margin-top: 15px; margin-bottom: 8px;}
+
+/* Inputs y Selects Responsivos */
+.grupo-input { margin-bottom: 12px; }
+label { display: block; font-weight: 600; font-size: 0.8rem; margin-bottom: 4px; color: var(--text-secondary);}
+
+.input-compuesto {
+    display: flex;
+    border: 2px solid var(--border-color);
+    border-radius: 6px;
+    overflow: hidden;
+    background-color: var(--input-bg);
+}
+
+.input-compuesto:focus-within { border-color: var(--primary-color); box-shadow: 0 0 0 3px rgba(0, 86, 179, 0.1); }
+
+.input-compuesto input {
+    flex: 1;
+    border: none;
+    padding: 10px;
+    font-size: 1rem;
+    outline: none;
+    background-color: transparent;
+    color: var(--text-main);
+    width: 60%; 
+}
+
+.input-compuesto select {
+    background-color: var(--select-bg);
+    border: none;
+    border-left: 1px solid var(--border-color);
+    padding: 0 8px;
+    font-weight: bold;
+    color: var(--primary-color);
+    cursor: pointer;
+    outline: none;
+    max-width: 40%;
+    font-size: 0.9rem;
+}
+
+.select-readonly { color: var(--text-secondary) !important; cursor: default !important; background-color: var(--input-bg) !important;}
+
+/* Botones de Acción Responsivos */
+.acciones { display: flex; gap: 8px; margin-top: 15px; }
+button { 
+    flex: 1; 
+    padding: 12px; 
+    border: none; 
+    border-radius: 8px; 
+    font-weight: bold; 
+    cursor: pointer; 
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-size: 0.85rem;
+}
+
+button:focus { outline: 3px solid rgba(0, 86, 179, 0.3); outline-offset: 2px; }
+
+.btn-calcular { background: var(--primary-color); color: white; box-shadow: 0 4px 6px rgba(0, 86, 179, 0.15); }
+.btn-calcular:hover { background: var(--primary-hover); transform: translateY(-1px); }
+
+.btn-limpiar { background: var(--secondary-color); color: white; }
+.btn-limpiar:hover { background: var(--secondary-hover); }
+
+/* Consola Responsiva */
+.consola { 
+    background: var(--terminal-bg); 
+    color: var(--terminal-text); 
+    padding: 12px; 
+    border-radius: 8px; 
+    height: 250px; 
+    font-family: 'Consolas', 'Courier New', monospace; 
+    font-size: 0.8rem; 
+    line-height: 1.5;
+    overflow-y: auto; 
+    border-left: 5px solid var(--terminal-border);
+    box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+    white-space: pre-wrap; 
+}
+
+/* Canvas Responsivo */
+.canvas-wrapper { width: 100%; position: relative; }
+canvas { 
+    width: 100%; 
+    height: auto; 
+    min-height: 280px; 
+    background: var(--canvas-bg); 
+    border: 1px solid var(--border-color); 
+    border-radius: 8px; 
+    background-image: radial-gradient(var(--canvas-grid) 1px, transparent 1px);
+    background-size: 20px 20px; 
+    display: block; 
+}
+
+/* Tabla de Historial Responsiva (¡AQUÍ ESTÁ LA CORRECCIÓN MÓVIL!) */
+.panel-historial { grid-column: 1 / -1; } 
+.header-historial { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 10px; }
+.header-historial h2 { border: none; padding: 0; margin: 0; }
+.btn-borrar-historial { width: auto; flex: 0 0 auto; background: var(--danger); color: white; font-size: 0.7rem; padding: 6px 12px; }
+.btn-borrar-historial:hover { background: var(--danger-hover); }
+
+.tabla-contenedor { 
+    width: 100%;
+    overflow-x: auto; 
+    border-radius: 8px; 
+    border: 1px solid var(--border-color); 
+}
+
+table { 
+    width: 100%; 
+    min-width: 100%; 
+    border-collapse: collapse; 
+    font-size: 0.75rem; 
+    background: var(--bg-card);
+}
+th { background: var(--select-bg); padding: 8px 4px; text-align: center; color: var(--primary-color); font-weight: 600; border-bottom: 2px solid var(--border-color);}
+td { padding: 8px 4px; border-bottom: 1px solid var(--border-color); font-family: 'Consolas', monospace; color: var(--text-main); text-align: center;}
+
+tr:hover td { background-color: var(--select-bg); }
+
+/* --- Punto 1: Sistema de Notificaciones UI --- */
+.notificacion-container {
+    position: fixed;
+    top: 15px;
+    right: 15px;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    pointer-events: none; 
+}
+
+.notificacion {
+    background-color: var(--bg-card);
+    color: var(--text-main);
+    padding: 12px 18px;
+    border-radius: 8px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    font-size: 0.85rem;
+    font-weight: bold;
+    border-left: 5px solid;
+    pointer-events: auto; 
+    cursor: pointer;
+    max-width: 300px;
+    
+    /* Animación de entrada */
+    animation: slideIn 0.3s ease-out forwards;
+    
+    /* Variables por defecto */
+    --notif-color: var(--primary-color);
+}
+
+.notificacion.error { --notif-color: var(--danger); }
+.notificacion.info { --notif-color: var(--info); }
+
+.notificacion-body { display: flex; align-items: center; gap: 10px; border-left-color: var(--notif-color); color: var(--notif-color); }
+
+/* Animaciones */
+@keyframes slideIn { from { transform: translateX(110%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+@keyframes fadeOut { from { transform: translateX(0); opacity: 1; } to { transform: translateX(110%); opacity: 0; } }
+
+.notificacion.ocultar { animation: fadeOut 0.3s ease-in forwards; }
+
+@keyframes fadeIn { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
+
+/* --- Media Queries para tablets y escritorio --- */
+@media (min-width: 768px) {
+    body { padding: 20px; }
+    .contenedor { gap: 20px; }
+    
+    header.header-principal { flex-direction: row; justify-content: space-between; text-align: left; padding: 15px; }
+    header.header-principal h1 { font-size: 1.8rem; }
+    .header-controles { width: auto; justify-content: flex-end; }
+    
+    .panel-ejemplos h2 { text-align: left; font-size: 1.1rem; }
+    button.btn-ejemplo { flex: 0 1 auto; }
+
+    .grid-principal { 
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); 
+        gap: 20px; 
+    }
+    
+    .panel-grafico { grid-column: span 1; } 
+    
+    canvas { min-height: 350px; }
+    
+    button { padding: 10px; font-size: 0.85rem; }
+    th, td { font-size: 0.85rem; padding: 12px 8px; }
+}
