@@ -1,31 +1,46 @@
-# ⚡ Simulador de Equilibrio Electrostático Pro
+# ⚛️ Laboratorio de Física Pro: Simulador Multi-Física
 
-Un laboratorio virtual interactivo construido con Vanilla JavaScript para calcular, visualizar y aprender sobre la dinámica de fuerzas en partículas con carga eléctrica suspendidas en campos eléctricos uniformes.
+Una plataforma educativa interactiva construida con Vanilla JavaScript para simular, visualizar y aprender sobre diferentes fenómenos físicos en tiempo real. 
 
-![Estado del Proyecto](https://img.shields.io/badge/Estado-Completado-success)
+![Estado del Proyecto](https://img.shields.io/badge/Estado-Activo-success)
 ![Tecnologías](https://img.shields.io/badge/Tecnologías-HTML5%20|%20CSS3%20|%20JS-blue)
+![Módulos](https://img.shields.io/badge/Módulos-Electrostática%20|%20Cinemática-ff69b4)
 
-## 🎯 Características Principales
+## 🌟 Características de la Plataforma
 
-* **🧠 Motor Físico en Cascada:** No se limita a una sola fórmula. Ingresa *cualquier* combinación de 3 parámetros (ej. Tensión, Ángulo y Carga) y el sistema deducirá el resto automáticamente.
-* **👨‍🏫 Modo Profesor (Paso a Paso):** No solo da el resultado final. La terminal integrada muestra el desglose matemático completo con fórmulas, sustituciones numéricas y despejes.
-* **🖱️ Interactividad Drag & Drop:** Arrastra la partícula directamente en el lienzo (Canvas) con el mouse o desde una pantalla táctil para cambiar el ángulo en tiempo real.
-* **🎨 Diseño Responsivo & Modo Oscuro:** Interfaz moderna que se adapta perfectamente a pantallas de PC, tablets y teléfonos celulares. Incluye un interruptor de Modo Oscuro nativo.
-* **📏 Conversión de Unidades Inteligente:** Soporte nativo para microcoulombs (µC), nanocoulombs (nC), gramos (g), kiloNewtons por Coulomb (kN/C), etc.
+Este laboratorio cuenta con una arquitectura de **Layout Dinámico**, permitiendo al usuario alternar entre diferentes ramas de la física desde un único panel central sin recargar la página.
+
+### ⚡ Módulo 1: Equilibrio Electrostático
+Simula una partícula cargada suspendida en un campo eléctrico uniforme.
+* **Motor en Cascada:** Ingresa cualquier combinación de 3 parámetros (Masa, Ángulo, Campo, Carga, Tensión, Fuerza) y el sistema deducirá el resto.
+* **Interactividad Drag & Drop:** Arrastra la partícula con el mouse o dedo. El sistema recalcula el ángulo y detecta inversiones de polaridad automáticamente.
+* **Modo Profesor:** Consola integrada que muestra el paso a paso matemático (fórmulas, sustituciones y resultados) de cada deducción.
+
+### 🚀 Módulo 2: Cinemática (Tiro Parabólico)
+Analiza el movimiento de proyectiles en dos dimensiones.
+* **Cálculo Automático:** Determina el tiempo de vuelo, la altura máxima (Hmax) y el alcance máximo (Rmax) a partir de la velocidad inicial, el ángulo y la gravedad.
+* **Animación en Tiempo Real:** Renderizado del vuelo del proyectil utilizando `requestAnimationFrame`.
+* **Vectores Dinámicos:** Visualización en vivo de los componentes de la velocidad (Vx constante en verde, Vy variable en rojo y V-total en azul) mientras la partícula viaja.
+
+### ✨ Funciones Globales
+* **Modo Oscuro Nativo:** Interfaz adaptable con paleta de colores de alto contraste.
+* **Diseño Responsivo:** Optimizado para funcionar perfectamente en PC, tablets y dispositivos móviles.
+* **Historial Inteligente:** Tabla de registros que formatea los datos automáticamente (notación científica dinámica) para ahorrar espacio en pantallas pequeñas.
+* **UI/UX Personalizada:** Sistema propio de notificaciones animadas y ventanas modales (sin usar los molestos `alert` o `confirm` del navegador).
 
 ## 🛠️ Tecnologías Utilizadas
 
-Este proyecto fue desarrollado íntegramente con tecnologías web nativas, sin depender de librerías o frameworks externos para maximizar el rendimiento:
-* **HTML5:** Estructura semántica.
-* **CSS3:** Flexbox, CSS Grid, Media Queries y variables nativas para el cambio de temas.
-* **Vanilla JavaScript (ES6+):** Lógica matemática, manipulación del DOM y renderizado gráfico mediante la API de `<canvas>`.
+Desarrollado con tecnologías web nativas para garantizar el máximo rendimiento y compatibilidad:
+* **HTML5:** Estructura semántica modular.
+* **CSS3:** Flexbox, CSS Grid, variables nativas para temas y Media Queries.
+* **Vanilla JavaScript (ES6+):** Lógica de física, controladores de estado (Theme Manager) y renderizado gráfico fluido mediante la API de `<canvas>`.
 
-## 🚀 Cómo usar el simulador
+## 🚀 Cómo empezar
 
-1. **Ingresa los datos:** Dirígete al panel izquierdo y llena al menos 3 campos (pueden ser Datos Base o Dinámica de Fuerzas).
-2. **Calcula:** Presiona el botón "Resolver".
-3. **Analiza:** Observa el Diagrama de Cuerpo Libre (DCL) generado dinámicamente, lee el paso a paso matemático en la consola y revisa el historial de la parte inferior.
-4. **Interactúa:** Toca y arrastra la esfera para ver cómo cambian las fuerzas en tiempo real. Cruzar el eje vertical invertirá el signo de la carga automáticamente.
+1. Abre el simulador en tu navegador web.
+2. Utiliza el selector superior para elegir la rama de la física que deseas explorar.
+3. Ingresa los parámetros en el panel izquierdo.
+4. Presiona **Resolver** o **Lanzar** para iniciar el motor físico y disfrutar de la simulación gráfica y matemática.
 
 ## 👨‍💻 Desarrollador
-Creado por **[HANNER MAURICIO PANESSO QUEJADA/JUDAS]** como herramienta educativa para el estudio del electromagnetismo y la física clásica.
+Creado por **[HANNER MAURICIO PANESSO QUEJADA/JUDAS]** combinando la pasión por la ingeniería de software y la física.
