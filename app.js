@@ -1,11 +1,24 @@
+/**
+ * SIMULADOR DE EQUILIBRIO ELECTROSTÁTICO
+ * Arquitectura de Software:
+ * 1. Utilidades y Lógica Core
+ * 2. Motor Físico (Resolución en Cascada)
+ * 3. Motor de Renderizado (Canvas / DCL)
+ * 4. Controladores de Interfaz de Usuario (UI & Drag)
+ */
+
 const g = 9.8;
 
-// Variables globales para la interactividad
+// Variables globales de estado interactivo
 let partX = 0;
 let partY = 0;
 let isDragging = false;
 let draggedOnce = false;
 let ultimaVariableCalculada = 'carga'; 
+
+// =========================================================
+// 1. UTILIDADES Y LECTURA DE DATOS
+// =========================================================
 
 function leerInputConUnidad(idInput, idSelect) {
     const el = document.getElementById(idInput);
@@ -14,11 +27,22 @@ function leerInputConUnidad(idInput, idSelect) {
     return parseFloat(el.value) * mult;
 }
 
+function formatearNumero(num) {
+    if (num === 0) return "0";
+    if (Math.abs(num) < 0.001 || Math.abs(num) >= 10000) return num.toExponential(2);
+    return parseFloat(num.toPrecision(4)).toString(); 
+}
+
+// =========================================================
+// 2. MOTOR FÍSICO (RESOLUCIÓN MATEMÁTICA)
+// =========================================================
+
 function ejecutarSimulacion(esArrastre = false) {
     let registro = ["=== PROCEDIMIENTO MATEMÁTICO ==="];
     let bloquePrincipal = [];
     let logSet = new Set(); 
 
+    // Helper para registrar pasos matemáticos sin repetirlos
     function addStep(titulo, formula, sustitucion, resultado) {
         let key = titulo; 
         if (!logSet.has(key) && !esArrastre) {
@@ -30,14 +54,32 @@ function ejecutarSimulacion(esArrastre = false) {
         }
     }
 
+    // --- LECTURA DE ESTADO INICIAL ---
     let m = leerInputConUnidad('masa', 'unidad-masa');
     let theta = leerInputConUnidad('angulo', null);
     let E = leerInputConUnidad('campo', 'unidad-campo');
     let q = leerInputConUnidad('carga', 'unidad-carga');
-
     let W = leerInputConUnidad('peso', 'unidad-peso');
     let T = leerInputConUnidad('tension', 'unidad-tension');
     let Fe = leerInputConUnidad('fuerza', 'unidad-fuerza');
+
+    // --- VALIDACIONES FÍSICAS ESTRICTAS (FAIL-FAST) ---
+    if (theta !== undefined) {
+        if (theta >= 90) {
+            mostrarNotificacion("Límite físico: El ángulo no puede ser ≥ 90° con un campo horizontal. Requeriría fuerza infinita.", 'error');
+            document.getElementById('consola-pasos').innerText = "❌ Error: Límite físico excedido (θ ≥ 90°).";
+            return;
+        }
+        if (theta < 0) {
+            mostrarNotificacion("El ángulo debe ser positivo. La dirección (izq/der) la definen los signos de la carga y el campo.", 'error');
+            document.getElementById('consola-pasos').innerText = "❌ Error: Ángulo negativo ingresado.";
+            return;
+        }
+    }
+    if (m !== undefined && m <= 0) {
+        mostrarNotificacion("Físicamente imposible: La masa debe ser mayor a 0 kg.", 'error');
+        return;
+    }
 
     let conteoInputs = [m, theta, E, q, W, T, Fe].filter(v => v !== undefined).length;
     if (conteoInputs < 3 && !esArrastre) {
@@ -46,8 +88,10 @@ function ejecutarSimulacion(esArrastre = false) {
     }
 
     try {
+        // --- CICLO DE RESOLUCIÓN EN CASCADA ---
         for (let i = 0; i < 3; i++) {
             
+            // Relaciones Gravedad
             if (m !== undefined && W === undefined) { 
                 W = m * g; 
                 addStep("Calculando Peso (W)", "W = m · g", `W = ${m.toPrecision(4)} · 9.8`, `W = ${W.toPrecision(4)} N`); 
@@ -57,6 +101,7 @@ function ejecutarSimulacion(esArrastre = false) {
                 addStep("Calculando Masa (m)", "m = W / g", `m = ${W.toPrecision(4)} / 9.8`, `m = ${m.toPrecision(4)} kg`); 
             }
 
+            // Relaciones Trigonométricas Dinámicas
             if (theta !== undefined && T !== undefined) {
                 if (W === undefined) { 
                     W = T * Math.cos(theta * Math.PI/180); 
@@ -113,24 +158,24 @@ function ejecutarSimulacion(esArrastre = false) {
                 }
             }
 
+            // Relaciones de Electromagnetismo Core
             if (Fe !== undefined && q !== undefined && E === undefined) {
                 if (q === 0) throw new Error("La carga no puede ser cero si hay Fuerza Eléctrica.");
-                // Preserva el signo para el campo si la carga es definida
                 E = (q < 0) ? - (Fe / Math.abs(q)) : (Fe / Math.abs(q));
                 addStep("Calculando Campo Eléctrico (E)", "E = Fe / q", `E = ${Fe.toPrecision(4)} / ${q.toExponential(3)}`, `E = ${E.toPrecision(5)} N/C`);
             }
             if (Fe !== undefined && E !== undefined && q === undefined) {
                 if (E === 0) throw new Error("El campo no puede ser cero si hay Fuerza Eléctrica.");
-                // Si es arrastre y forzamos lado izquierdo, el signo de q debe ajustarse (resuelto abajo)
                 q = Fe / E; 
                 addStep("Calculando Carga (q)", "q = Fe / E", `q = ${Fe.toPrecision(4)} / ${E.toExponential(3)}`, `q = ${q.toExponential(4)} C`);
             }
             if (q !== undefined && E !== undefined && Fe === undefined) {
-                Fe = Math.abs(q * E); // Fe siempre magnitud positiva, la dirección la dan q y E
+                Fe = Math.abs(q * E); 
                 addStep("Calculando Fuerza Eléctrica (Fe)", "Fe = |q · E|", `Fe = |${q.toExponential(3)} · ${E.toExponential(3)}|`, `Fe = ${Fe.toPrecision(4)} N`);
             }
         }
 
+        // --- VERIFICACIÓN DE ESTADO FINAL ---
         let faltantes = [];
         if (m === undefined) faltantes.push("Masa (m)");
         if (theta === undefined) faltantes.push("Ángulo (θ)");
@@ -147,6 +192,7 @@ function ejecutarSimulacion(esArrastre = false) {
         return;
     }
 
+    // --- ESCRITURA DE DATOS EN LA UI ---
     if(document.getElementById('masa') && m !== undefined) document.getElementById('masa').value = parseFloat((m / parseFloat(document.getElementById('unidad-masa').value)).toPrecision(5));
     if(document.getElementById('angulo') && theta !== undefined) document.getElementById('angulo').value = parseFloat(theta.toPrecision(5));
     if(document.getElementById('campo') && E !== undefined) document.getElementById('campo').value = parseFloat((E / parseFloat(document.getElementById('unidad-campo').value)).toPrecision(5));
@@ -166,12 +212,13 @@ function ejecutarSimulacion(esArrastre = false) {
         document.getElementById('consola-pasos').innerText = registro.join('\n');
     }
 
+    // Llamadas a módulos externos
     dibujarDCL(theta, q, E, W, T, Fe, m);
     if (!esArrastre) agregarHistorial(m, theta, E, q, T, Fe);
 }
 
 // =========================================================
-// CORRECCIÓN 1: DIBUJO CON ÁNGULO Y DESVÍO DINÁMICO
+// 3. MOTOR DE RENDERIZADO (CANVAS DCL)
 // =========================================================
 
 function dibujarDCL(theta, q, E, wVal, tVal, feVal, mVal) {
@@ -181,16 +228,13 @@ function dibujarDCL(theta, q, E, wVal, tVal, feVal, mVal) {
     
     canvas.width = wrapper.clientWidth;
     canvas.height = window.innerWidth >= 768 ? 450 : Math.max(wrapper.clientWidth * 0.75, 280); 
-    
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     const origenX = canvas.width / 2;
     const origenY = 40; 
     const longitudCuerda = canvas.height * 0.55; 
 
-    // Aquí está la clave: Hacia dónde debe inclinarse la bolita
-    // Si carga y campo tienen mismo signo (+ con +) o (- con -), va a la derecha (1). 
-    // Si tienen signos opuestos, va a la izquierda (-1).
+    // Lógica de desvío
     const direccionDesvio = (q * E >= 0) ? 1 : -1;
     const thetaRad = theta * (Math.PI / 180) * direccionDesvio;
 
@@ -213,49 +257,43 @@ function dibujarDCL(theta, q, E, wVal, tVal, feVal, mVal) {
     ctx.fillStyle = E >= 0 ? '#4dabf7' : '#ff6b6b';
     ctx.fillText(E >= 0 ? "-" : "+", canvas.width - 12, canvas.height / 2 + 7);
 
-    // Eje vertical
+    // Eje vertical (Línea punteada)
     ctx.setLineDash([5, 5]);
     ctx.strokeStyle = isDarkMode ? '#555' : '#aaa'; ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(origenX, origenY); ctx.lineTo(origenX, canvas.height - 15); ctx.stroke();
     
-    // --- CORRECCIÓN DEL ARCO DEL ÁNGULO ---
+    // Dibujo del Arco de Ángulo dinámico
     if (Math.abs(theta) > 1) {
         ctx.beginPath();
-        // Si va a la derecha (1), el arco empieza en el eje vertical (PI/2) y baja.
-        // Si va a la izquierda (-1), el arco debe reflejarse.
         let startAngle, endAngle, anticlockwise;
-        
         if (direccionDesvio === 1) {
-            startAngle = Math.PI / 2 - thetaRad; // Ángulo de la cuerda
-            endAngle = Math.PI / 2;              // Eje vertical
+            startAngle = Math.PI / 2 - thetaRad; 
+            endAngle = Math.PI / 2;              
             anticlockwise = false;
         } else {
-            startAngle = Math.PI / 2;            // Eje vertical
-            endAngle = Math.PI / 2 - thetaRad;   // Ángulo de la cuerda (que es negativo)
+            startAngle = Math.PI / 2;            
+            endAngle = Math.PI / 2 - thetaRad;   
             anticlockwise = true;
         }
-
         ctx.arc(origenX, origenY, 50, startAngle, endAngle, anticlockwise);
         ctx.strokeStyle = '#007bff'; ctx.lineWidth = 2; ctx.stroke();
         dibujarTextoFondo(ctx, `θ = ${theta.toFixed(1)}°`, origenX + (direccionDesvio * 20), origenY + 65, '#007bff');
     }
     ctx.setLineDash([]);
 
-    // Techo y Cuerda
+    // Techo y Cuerda Principal
     ctx.strokeStyle = isDarkMode ? '#aaa' : '#333'; ctx.lineWidth = 4;
     ctx.beginPath(); ctx.moveTo(origenX - 50, origenY); ctx.lineTo(origenX + 50, origenY); ctx.stroke();
-    
     ctx.lineWidth = 2; ctx.strokeStyle = isDarkMode ? '#fff' : '#000';
     ctx.beginPath(); ctx.moveTo(origenX, origenY); ctx.lineTo(px, py); ctx.stroke();
 
-    // Vectores
+    // Vectores de Fuerza
     const vecScale = canvas.height / 350;
     dibujarFlecha(ctx, px, py, origenX, origenY, '#007bff', `T=${tVal.toPrecision(3)}N`, vecScale);
     dibujarFlecha(ctx, px, py, px, py + 60 * vecScale, '#28a745', `W=${wVal.toPrecision(3)}N`, vecScale);
-    // Fuerza eléctrica apunta hacia el lado que se desvía
     dibujarFlecha(ctx, px, py, px + (70 * vecScale * direccionDesvio), py, '#dc3545', `Fe=${feVal.toPrecision(3)}N`, vecScale);
 
-    // Partícula
+    // Renderizado de Partícula Central
     ctx.beginPath(); ctx.arc(px, py, 18, 0, Math.PI * 2);
     ctx.fillStyle = q >= 0 ? '#ff5722' : '#3f51b5';
     ctx.shadowBlur = isDarkMode ? 15 : 10; ctx.shadowColor = ctx.fillStyle;
@@ -263,7 +301,7 @@ function dibujarDCL(theta, q, E, wVal, tVal, feVal, mVal) {
     ctx.shadowBlur = 0;
     ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
     
-    // Texto Carga
+    // Textos internos de la partícula
     ctx.fillStyle = 'white'; ctx.textAlign = 'center'; ctx.font = "bold 11px Arial";
     const qSelect = document.getElementById('unidad-carga');
     const qUnitText = qSelect.options[qSelect.selectedIndex].text; 
@@ -271,12 +309,10 @@ function dibujarDCL(theta, q, E, wVal, tVal, feVal, mVal) {
     let qMostrar = (q / qMult).toPrecision(3);
     ctx.fillText(`${q > 0 ? '+' : ''}${qMostrar} ${qUnitText}`, px, py + 4);
 
-    // Texto Masa
     const mSelect = document.getElementById('unidad-masa');
     const mUnitText = mSelect.options[mSelect.selectedIndex].text; 
     const mMult = parseFloat(mSelect.value);
     let mMostrar = (mVal / mMult).toPrecision(3);
-    
     ctx.fillStyle = isDarkMode ? '#cccccc' : '#555555';
     ctx.font = "bold 12px Arial";
     ctx.fillText(`m = ${mMostrar} ${mUnitText}`, px, py + 35);
@@ -310,18 +346,15 @@ function dibujarFlecha(ctx, x1, y1, x2, y2, color, txt, scale=1) {
     }
 }
 
-function formatearNumero(num) {
-    if (num === 0) return "0";
-    if (Math.abs(num) < 0.001 || Math.abs(num) >= 10000) return num.toExponential(2);
-    return parseFloat(num.toPrecision(4)).toString(); 
-}
+// =========================================================
+// 4. CONTROLADORES DE INTERFAZ Y EVENTOS (UI)
+// =========================================================
 
 function agregarHistorial(m, t, e, q, tension, fe) {
     const tabla = document.querySelector('#tabla-resultados tbody');
     if (!tabla) return;
     const fila = tabla.insertRow(0);
     fila.style.animation = "fadeIn 0.5s ease-in";
-    
     fila.innerHTML = `
         <td>${formatearNumero(m)}</td>
         <td>${t.toFixed(1)}°</td>
@@ -338,7 +371,7 @@ function limpiarTodo() {
         if(document.getElementById(id)) document.getElementById(id).value = "";
     });
     const consola = document.getElementById('consola-pasos');
-    if(consola) consola.innerText = "Esperando datos...\nIngresa al menos 3 parámetros principales.";
+    if(consola) consola.innerText = "Esperando datos...\nIngresa al menos 3 parámetros combinados (ej. Ángulo, Carga, Tensión).";
     const cv = document.getElementById('lienzo');
     if(cv) {
         cv.getContext('2d').clearRect(0, 0, cv.width, cv.height);
@@ -352,10 +385,6 @@ function limpiarHistorial() {
         if (confirm("¿Borrar todos los registros del historial?")) tbody.innerHTML = "";
     }
 }
-
-// =========================================================
-// EVENTOS, NOTIFICACIONES Y UI 
-// =========================================================
 
 function inicializarDarkMode() {
     const toggle = document.getElementById('dark-mode-toggle');
@@ -433,10 +462,6 @@ function inicializarCanvasResponsivo() {
     window.addEventListener('resize', () => { if (partX !== 0) ejecutarSimulacion(true); });
 }
 
-// =========================================================
-// CORRECCIÓN 2: ARRASTRE INTELIGENTE (BIDERECCIONAL)
-// =========================================================
-
 function inicializarEventosDrag() {
     const canvas = document.getElementById('lienzo');
     if (!canvas) return;
@@ -480,25 +505,22 @@ function inicializarEventosDrag() {
         const dx = pos.x - origenX;
         const dy = pos.y - origenY;
 
-        // Calculamos el ángulo absoluto (siempre positivo para la casilla del formulario)
         let newTheta = Math.atan2(Math.abs(dx), dy) * (180 / Math.PI);
         if (newTheta < 0) newTheta = 0;
-        if (newTheta > 85) newTheta = 85; 
+        if (newTheta >= 90) newTheta = 89.9; // Prevención de límite visual por arrastre
 
         document.getElementById('angulo').value = newTheta.toFixed(2);
         
-        // --- LOGICA DE CAMBIO DE SIGNO SEGÚN EL LADO AL QUE ARRASTRES ---
-        // Si dx es negativo (lado izquierdo) pero el campo E es positivo, la carga DEBE ser negativa
+        // Ajuste inteligente de signos por arrastre
         let E = leerInputConUnidad('campo', 'unidad-campo');
         let qEl = document.getElementById('carga');
         
         if (qEl && qEl.value !== "") {
             let qActual = parseFloat(qEl.value);
-            // Si el mouse está a la izquierda y el campo es +, o el mouse está a la derecha y el campo es -
             if ((dx < 0 && E > 0) || (dx > 0 && E < 0)) {
-                if (qActual > 0) qEl.value = -Math.abs(qActual); // Fuerza negativo
+                if (qActual > 0) qEl.value = -Math.abs(qActual); 
             } else {
-                if (qActual < 0) qEl.value = Math.abs(qActual);  // Fuerza positivo
+                if (qActual < 0) qEl.value = Math.abs(qActual);  
             }
         }
         
@@ -530,6 +552,7 @@ function inicializarEventosDrag() {
     window.addEventListener('touchend', alSoltar);
 }
 
+// Inicialización de la Aplicación
 function inicializarApp() {
     inicializarDarkMode();    
     inicializarConvertidores(); 
