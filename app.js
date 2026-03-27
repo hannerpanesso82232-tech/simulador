@@ -42,7 +42,6 @@ function ejecutarSimulacion(esArrastre = false) {
     let bloquePrincipal = [];
     let logSet = new Set(); 
 
-    // Helper para registrar pasos matemáticos sin repetirlos
     function addStep(titulo, formula, sustitucion, resultado) {
         let key = titulo; 
         if (!logSet.has(key) && !esArrastre) {
@@ -54,7 +53,6 @@ function ejecutarSimulacion(esArrastre = false) {
         }
     }
 
-    // --- LECTURA DE ESTADO INICIAL ---
     let m = leerInputConUnidad('masa', 'unidad-masa');
     let theta = leerInputConUnidad('angulo', null);
     let E = leerInputConUnidad('campo', 'unidad-campo');
@@ -63,7 +61,6 @@ function ejecutarSimulacion(esArrastre = false) {
     let T = leerInputConUnidad('tension', 'unidad-tension');
     let Fe = leerInputConUnidad('fuerza', 'unidad-fuerza');
 
-    // --- VALIDACIONES FÍSICAS ESTRICTAS (FAIL-FAST) ---
     if (theta !== undefined) {
         if (theta >= 90) {
             mostrarNotificacion("Límite físico: El ángulo no puede ser ≥ 90° con un campo horizontal. Requeriría fuerza infinita.", 'error');
@@ -88,10 +85,7 @@ function ejecutarSimulacion(esArrastre = false) {
     }
 
     try {
-        // --- CICLO DE RESOLUCIÓN EN CASCADA ---
         for (let i = 0; i < 3; i++) {
-            
-            // Relaciones Gravedad
             if (m !== undefined && W === undefined) { 
                 W = m * g; 
                 addStep("Calculando Peso (W)", "W = m · g", `W = ${m.toPrecision(4)} · 9.8`, `W = ${W.toPrecision(4)} N`); 
@@ -101,7 +95,6 @@ function ejecutarSimulacion(esArrastre = false) {
                 addStep("Calculando Masa (m)", "m = W / g", `m = ${W.toPrecision(4)} / 9.8`, `m = ${m.toPrecision(4)} kg`); 
             }
 
-            // Relaciones Trigonométricas Dinámicas
             if (theta !== undefined && T !== undefined) {
                 if (W === undefined) { 
                     W = T * Math.cos(theta * Math.PI/180); 
@@ -158,7 +151,6 @@ function ejecutarSimulacion(esArrastre = false) {
                 }
             }
 
-            // Relaciones de Electromagnetismo Core
             if (Fe !== undefined && q !== undefined && E === undefined) {
                 if (q === 0) throw new Error("La carga no puede ser cero si hay Fuerza Eléctrica.");
                 E = (q < 0) ? - (Fe / Math.abs(q)) : (Fe / Math.abs(q));
@@ -175,7 +167,6 @@ function ejecutarSimulacion(esArrastre = false) {
             }
         }
 
-        // --- VERIFICACIÓN DE ESTADO FINAL ---
         let faltantes = [];
         if (m === undefined) faltantes.push("Masa (m)");
         if (theta === undefined) faltantes.push("Ángulo (θ)");
@@ -192,7 +183,6 @@ function ejecutarSimulacion(esArrastre = false) {
         return;
     }
 
-    // --- ESCRITURA DE DATOS EN LA UI ---
     if(document.getElementById('masa') && m !== undefined) document.getElementById('masa').value = parseFloat((m / parseFloat(document.getElementById('unidad-masa').value)).toPrecision(5));
     if(document.getElementById('angulo') && theta !== undefined) document.getElementById('angulo').value = parseFloat(theta.toPrecision(5));
     if(document.getElementById('campo') && E !== undefined) document.getElementById('campo').value = parseFloat((E / parseFloat(document.getElementById('unidad-campo').value)).toPrecision(5));
@@ -212,7 +202,6 @@ function ejecutarSimulacion(esArrastre = false) {
         document.getElementById('consola-pasos').innerText = registro.join('\n');
     }
 
-    // Llamadas a módulos externos
     dibujarDCL(theta, q, E, W, T, Fe, m);
     if (!esArrastre) agregarHistorial(m, theta, E, q, T, Fe);
 }
@@ -234,7 +223,6 @@ function dibujarDCL(theta, q, E, wVal, tVal, feVal, mVal) {
     const origenY = 40; 
     const longitudCuerda = canvas.height * 0.55; 
 
-    // Lógica de desvío
     const direccionDesvio = (q * E >= 0) ? 1 : -1;
     const thetaRad = theta * (Math.PI / 180) * direccionDesvio;
 
@@ -244,7 +232,6 @@ function dibujarDCL(theta, q, E, wVal, tVal, feVal, mVal) {
     partX = px; 
     partY = py;
 
-    // Placas Laterales
     ctx.fillStyle = E >= 0 ? 'rgba(220, 53, 69, 0.12)' : 'rgba(0, 86, 179, 0.12)';
     ctx.fillRect(0, 0, 25, canvas.height);
     ctx.fillStyle = E >= 0 ? 'rgba(0, 86, 179, 0.12)' : 'rgba(220, 53, 69, 0.12)';
@@ -257,12 +244,10 @@ function dibujarDCL(theta, q, E, wVal, tVal, feVal, mVal) {
     ctx.fillStyle = E >= 0 ? '#4dabf7' : '#ff6b6b';
     ctx.fillText(E >= 0 ? "-" : "+", canvas.width - 12, canvas.height / 2 + 7);
 
-    // Eje vertical (Línea punteada)
     ctx.setLineDash([5, 5]);
     ctx.strokeStyle = isDarkMode ? '#555' : '#aaa'; ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(origenX, origenY); ctx.lineTo(origenX, canvas.height - 15); ctx.stroke();
     
-    // Dibujo del Arco de Ángulo dinámico
     if (Math.abs(theta) > 1) {
         ctx.beginPath();
         let startAngle, endAngle, anticlockwise;
@@ -281,19 +266,16 @@ function dibujarDCL(theta, q, E, wVal, tVal, feVal, mVal) {
     }
     ctx.setLineDash([]);
 
-    // Techo y Cuerda Principal
     ctx.strokeStyle = isDarkMode ? '#aaa' : '#333'; ctx.lineWidth = 4;
     ctx.beginPath(); ctx.moveTo(origenX - 50, origenY); ctx.lineTo(origenX + 50, origenY); ctx.stroke();
     ctx.lineWidth = 2; ctx.strokeStyle = isDarkMode ? '#fff' : '#000';
     ctx.beginPath(); ctx.moveTo(origenX, origenY); ctx.lineTo(px, py); ctx.stroke();
 
-    // Vectores de Fuerza
     const vecScale = canvas.height / 350;
     dibujarFlecha(ctx, px, py, origenX, origenY, '#007bff', `T=${tVal.toPrecision(3)}N`, vecScale);
     dibujarFlecha(ctx, px, py, px, py + 60 * vecScale, '#28a745', `W=${wVal.toPrecision(3)}N`, vecScale);
     dibujarFlecha(ctx, px, py, px + (70 * vecScale * direccionDesvio), py, '#dc3545', `Fe=${feVal.toPrecision(3)}N`, vecScale);
 
-    // Renderizado de Partícula Central
     ctx.beginPath(); ctx.arc(px, py, 18, 0, Math.PI * 2);
     ctx.fillStyle = q >= 0 ? '#ff5722' : '#3f51b5';
     ctx.shadowBlur = isDarkMode ? 15 : 10; ctx.shadowColor = ctx.fillStyle;
@@ -301,7 +283,6 @@ function dibujarDCL(theta, q, E, wVal, tVal, feVal, mVal) {
     ctx.shadowBlur = 0;
     ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
     
-    // Textos internos de la partícula
     ctx.fillStyle = 'white'; ctx.textAlign = 'center'; ctx.font = "bold 11px Arial";
     const qSelect = document.getElementById('unidad-carga');
     const qUnitText = qSelect.options[qSelect.selectedIndex].text; 
@@ -379,12 +360,60 @@ function limpiarTodo() {
     }
 }
 
+// --- NUEVO: MODAL DE CONFIRMACIÓN INTELIGENTE ---
+function inyectarModalConfirmacion() {
+    if (document.getElementById('modal-confirmacion')) return;
+
+    // Inyectamos el HTML del Modal
+    const modalHTML = `
+    <div id="modal-confirmacion" class="modal-overlay">
+        <div class="modal-content">
+            <h3>⚠️ Borrar Historial</h3>
+            <p>¿Estás seguro de que deseas eliminar todos los registros? Esta acción no se puede deshacer.</p>
+            <div class="modal-botones">
+                <button id="btn-cancelar-modal" class="btn-cancelar">Cancelar</button>
+                <button id="btn-confirmar-modal" class="btn-confirmar">Sí, borrar</button>
+            </div>
+        </div>
+    </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+    // Inyectamos los estilos CSS para que se vea hermoso sin tocar el style.css
+    const style = document.createElement('style');
+    style.innerHTML = `
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); display: flex; justify-content: center; align-items: center; z-index: 10000; opacity: 0; visibility: hidden; transition: opacity 0.25s ease; }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal-content { background: var(--bg-card); padding: 25px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); text-align: center; max-width: 320px; width: 90%; transform: scale(0.9); transition: transform 0.25s ease; border: 1px solid var(--border-color); }
+        .modal-overlay.active .modal-content { transform: scale(1); }
+        .modal-content h3 { margin-top: 0; color: var(--danger); font-size: 1.3rem; margin-bottom: 12px; }
+        .modal-content p { color: var(--text-secondary); font-size: 0.95rem; margin-bottom: 25px; line-height: 1.5; }
+        .modal-botones { display: flex; gap: 12px; }
+    `;
+    document.head.appendChild(style);
+
+    // Eventos de los botones
+    document.getElementById('btn-cancelar-modal').addEventListener('click', () => {
+        document.getElementById('modal-confirmacion').classList.remove('active');
+    });
+
+    document.getElementById('btn-confirmar-modal').addEventListener('click', () => {
+        document.querySelector('#tabla-resultados tbody').innerHTML = "";
+        document.getElementById('modal-confirmacion').classList.remove('active');
+        mostrarNotificacion("Historial borrado correctamente.", 'info');
+    });
+}
+
 function limpiarHistorial() {
     const tbody = document.querySelector('#tabla-resultados tbody');
     if (tbody && tbody.rows.length > 0) {
-        if (confirm("¿Borrar todos los registros del historial?")) tbody.innerHTML = "";
+        // En lugar de "confirm()", activamos nuestro hermoso Modal
+        document.getElementById('modal-confirmacion').classList.add('active');
+    } else {
+        mostrarNotificacion("El historial ya está vacío.", 'info');
     }
 }
+// ------------------------------------------------
 
 function inicializarDarkMode() {
     const toggle = document.getElementById('dark-mode-toggle');
@@ -507,11 +536,10 @@ function inicializarEventosDrag() {
 
         let newTheta = Math.atan2(Math.abs(dx), dy) * (180 / Math.PI);
         if (newTheta < 0) newTheta = 0;
-        if (newTheta >= 90) newTheta = 89.9; // Prevención de límite visual por arrastre
+        if (newTheta >= 90) newTheta = 89.9; 
 
         document.getElementById('angulo').value = newTheta.toFixed(2);
         
-        // Ajuste inteligente de signos por arrastre
         let E = leerInputConUnidad('campo', 'unidad-campo');
         let qEl = document.getElementById('carga');
         
@@ -558,6 +586,7 @@ function inicializarApp() {
     inicializarConvertidores(); 
     inicializarCanvasResponsivo(); 
     inicializarEventosDrag();
+    inyectarModalConfirmacion(); // <-- ¡Nuestra nueva función arranca aquí!
 }
 
 document.addEventListener('DOMContentLoaded', inicializarApp);
