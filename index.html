@@ -5,9 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Laboratorio de Física Pro</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2280%22>⚛️</text></svg>">
-    <link rel="stylesheet" href="style.css?v=2">
+    <link rel="stylesheet" href="style.css?v=3">
     <style>
-        /* Estilos en línea para evitar la caché y asegurar la limpieza */
         #selector-temas { appearance: none; background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); font-family: inherit; font-size: 0.95rem; font-weight: 600; padding: 10px 18px; border-radius: 8px; cursor: pointer; transition: border-color 0.2s; -webkit-tap-highlight-color: transparent; }
         #selector-temas:hover, #selector-temas:focus { border-color: var(--primary); outline: none; box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.15); }
         .grid-header-profesional { display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap; margin-bottom: 30px; border-bottom: 2px solid var(--border-color); padding-bottom: 15px; }
@@ -82,11 +81,28 @@
                         </div>
                     </div>
 
-                    <h3>3. Dinámica</h3>
+                    <h3>3. Dinámica y Fuerzas</h3>
                     <div class="grid-inputs">
                         <div class="input-grupo">
+                            <label>Peso (W):</label>
+                            <div class="input-with-select">
+                                <input type="number" id="peso" placeholder="Opcional">
+                                <select id="unidad-peso"><option value="1">N</option></select>
+                            </div>
+                        </div>
+                        <div class="input-grupo">
                             <label>Tensión (T):</label>
-                            <input type="number" id="tension" placeholder="Opcional">
+                            <div class="input-with-select">
+                                <input type="number" id="tension" placeholder="Opcional">
+                                <select id="unidad-tension"><option value="1">N</option></select>
+                            </div>
+                        </div>
+                        <div class="input-grupo" style="grid-column: span 2;">
+                            <label>Fuerza Eléctrica (Fe):</label>
+                            <div class="input-with-select">
+                                <input type="number" id="fuerza" placeholder="Opcional">
+                                <select id="unidad-fuerza"><option value="1">N</option></select>
+                            </div>
                         </div>
                     </div>
                     
@@ -109,7 +125,7 @@
                             </div>
                         </div>
                         <div class="input-grupo">
-                            <label>Ángulo Lanzamiento (θ):</label>
+                            <label>Ángulo (θ):</label>
                             <input type="number" id="angulo_k" placeholder="Ej. 45">
                         </div>
                     </div>
@@ -130,7 +146,7 @@
                 </div>
 
                 <div id="panel-ejemplos-estatico" class="card modulo-inputs examples-card">
-                    <h2>🎯 Laboratorio de Pruebas: Hallar Carga</h2>
+                    <h2>🎯 Ejemplos Rápidos</h2>
                     <div class="ejemplos-botones-grid">
                         <button onclick="cargarEjemplo(1)" class="btn-secundario">10g, θ=30°, E=500</button>
                         <button onclick="cargarEjemplo(2)" class="btn-secundario">50g, θ=33.4°, E=2.6e4</button>
@@ -141,7 +157,7 @@
 
             <section class="panel-resultados">
                 <div class="card panel-consola modulo-inputs">
-                    <h2>👨‍🏫 Procedimiento Físico</h2>
+                    <h2>👨‍🏫 Procedimiento Matemático</h2>
                     <pre id="consola-pasos">Selecciona un tema y dale a resolver...</pre>
                 </div>
 
@@ -170,8 +186,8 @@
                             <th>v₀(m/s)</th>
                             <th>E(N/C)</th>
                             <th>q(C)</th>
-                            <th>T(N)</th>
-                            <th>Fe(N)</th>
+                            <th>T(N) / Rmax(m)</th>
+                            <th>Fe(N) / Hmax(m)</th>
                         </tr>
                     </thead>
                     <tbody></tbody>
@@ -179,9 +195,7 @@
             </div>
         </footer>
     </div>
-
     <div id="notificacion-container"></div>
-
-    <script src="app.js?v=3"></script>
+    <script src="app.js?v=4"></script>
 </body>
 </html>
