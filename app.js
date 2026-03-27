@@ -17,9 +17,8 @@ function leerInputConUnidad(idInput, idSelect) {
 function ejecutarSimulacion(esArrastre = false) {
     let registro = ["=== PROCEDIMIENTO MATEMÁTICO ==="];
     let bloquePrincipal = [];
-    let logSet = new Set(); // Para evitar repetir textos en la consola
+    let logSet = new Set(); 
 
-    // Función interna para imprimir el paso a paso bonito
     function addStep(titulo, formula, sustitucion, resultado) {
         let key = titulo; 
         if (!logSet.has(key) && !esArrastre) {
@@ -31,7 +30,6 @@ function ejecutarSimulacion(esArrastre = false) {
         }
     }
 
-    // 1. Lectura de inputs
     let m = leerInputConUnidad('masa', 'unidad-masa');
     let theta = leerInputConUnidad('angulo', null);
     let E = leerInputConUnidad('campo', 'unidad-campo');
@@ -48,10 +46,8 @@ function ejecutarSimulacion(esArrastre = false) {
     }
 
     try {
-        // === 2. MOTOR FÍSICO EN CASCADA CON PASO A PASO DETALLADO ===
         for (let i = 0; i < 3; i++) {
             
-            // Masa y Peso
             if (m !== undefined && W === undefined) { 
                 W = m * g; 
                 addStep("Calculando Peso (W)", "W = m · g", `W = ${m.toPrecision(4)} · 9.8`, `W = ${W.toPrecision(4)} N`); 
@@ -61,7 +57,6 @@ function ejecutarSimulacion(esArrastre = false) {
                 addStep("Calculando Masa (m)", "m = W / g", `m = ${W.toPrecision(4)} / 9.8`, `m = ${m.toPrecision(4)} kg`); 
             }
 
-            // Tensión y Ángulo -> Peso y Fe
             if (theta !== undefined && T !== undefined) {
                 if (W === undefined) { 
                     W = T * Math.cos(theta * Math.PI/180); 
@@ -73,7 +68,6 @@ function ejecutarSimulacion(esArrastre = false) {
                 }
             }
 
-            // Ángulo y Peso -> Fe y Tensión
             if (theta !== undefined && W !== undefined) {
                 if (Fe === undefined) { 
                     Fe = W * Math.tan(theta * Math.PI/180); 
@@ -85,7 +79,6 @@ function ejecutarSimulacion(esArrastre = false) {
                 }
             }
 
-            // Ángulo y Fe -> Peso y Tensión
             if (theta !== undefined && Fe !== undefined) {
                 if (W === undefined) { 
                     W = Fe / Math.tan(theta * Math.PI/180); 
@@ -97,7 +90,6 @@ function ejecutarSimulacion(esArrastre = false) {
                 }
             }
 
-            // Peso y Fe -> Tensión y Ángulo
             if (W !== undefined && Fe !== undefined) {
                 if (T === undefined) { 
                     T = Math.sqrt(W*W + Fe*Fe); 
@@ -109,7 +101,6 @@ function ejecutarSimulacion(esArrastre = false) {
                 }
             }
 
-            // Tensión y Peso -> Fe y Ángulo
             if (T !== undefined && W !== undefined) {
                 if (T < W) throw new Error("Físicamente imposible: La Tensión no puede ser menor al Peso.");
                 if (Fe === undefined) { 
@@ -122,24 +113,24 @@ function ejecutarSimulacion(esArrastre = false) {
                 }
             }
 
-            // Eléctricas: Fe, E, q
             if (Fe !== undefined && q !== undefined && E === undefined) {
                 if (q === 0) throw new Error("La carga no puede ser cero si hay Fuerza Eléctrica.");
-                E = Fe / Math.abs(q);
-                addStep("Calculando Campo Eléctrico (E)", "E = Fe / |q|", `E = ${Fe.toPrecision(4)} / |${q.toExponential(3)}|`, `E = ${E.toPrecision(5)} N/C`);
+                // Preserva el signo para el campo si la carga es definida
+                E = (q < 0) ? - (Fe / Math.abs(q)) : (Fe / Math.abs(q));
+                addStep("Calculando Campo Eléctrico (E)", "E = Fe / q", `E = ${Fe.toPrecision(4)} / ${q.toExponential(3)}`, `E = ${E.toPrecision(5)} N/C`);
             }
             if (Fe !== undefined && E !== undefined && q === undefined) {
                 if (E === 0) throw new Error("El campo no puede ser cero si hay Fuerza Eléctrica.");
+                // Si es arrastre y forzamos lado izquierdo, el signo de q debe ajustarse (resuelto abajo)
                 q = Fe / E; 
                 addStep("Calculando Carga (q)", "q = Fe / E", `q = ${Fe.toPrecision(4)} / ${E.toExponential(3)}`, `q = ${q.toExponential(4)} C`);
             }
             if (q !== undefined && E !== undefined && Fe === undefined) {
-                Fe = Math.abs(q) * E;
-                addStep("Calculando Fuerza Eléctrica (Fe)", "Fe = |q| · E", `Fe = |${q.toExponential(3)}| · ${E.toExponential(3)}`, `Fe = ${Fe.toPrecision(4)} N`);
+                Fe = Math.abs(q * E); // Fe siempre magnitud positiva, la dirección la dan q y E
+                addStep("Calculando Fuerza Eléctrica (Fe)", "Fe = |q · E|", `Fe = |${q.toExponential(3)} · ${E.toExponential(3)}|`, `Fe = ${Fe.toPrecision(4)} N`);
             }
         }
 
-        // Revisión final de faltantes
         let faltantes = [];
         if (m === undefined) faltantes.push("Masa (m)");
         if (theta === undefined) faltantes.push("Ángulo (θ)");
@@ -156,7 +147,6 @@ function ejecutarSimulacion(esArrastre = false) {
         return;
     }
 
-    // 4. Escribir resultados en el DOM
     if(document.getElementById('masa') && m !== undefined) document.getElementById('masa').value = parseFloat((m / parseFloat(document.getElementById('unidad-masa').value)).toPrecision(5));
     if(document.getElementById('angulo') && theta !== undefined) document.getElementById('angulo').value = parseFloat(theta.toPrecision(5));
     if(document.getElementById('campo') && E !== undefined) document.getElementById('campo').value = parseFloat((E / parseFloat(document.getElementById('unidad-campo').value)).toPrecision(5));
@@ -166,7 +156,6 @@ function ejecutarSimulacion(esArrastre = false) {
     if(document.getElementById('tension') && T !== undefined) document.getElementById('tension').value = parseFloat((T / parseFloat(document.getElementById('unidad-tension').value)).toPrecision(5));
     if(document.getElementById('fuerza') && Fe !== undefined) document.getElementById('fuerza').value = parseFloat((Fe / parseFloat(document.getElementById('unidad-fuerza').value)).toPrecision(5));
 
-    // Consola Final
     if (!esArrastre) {
         if (bloquePrincipal.length === 0) {
             registro.push("\n> Sistema ingresado manualmente completo. Comprobando y graficando...");
@@ -182,7 +171,7 @@ function ejecutarSimulacion(esArrastre = false) {
 }
 
 // =========================================================
-// FUNCIONES DE DIBUJO Y FORMATO 
+// CORRECCIÓN 1: DIBUJO CON ÁNGULO Y DESVÍO DINÁMICO
 // =========================================================
 
 function dibujarDCL(theta, q, E, wVal, tVal, feVal, mVal) {
@@ -199,6 +188,9 @@ function dibujarDCL(theta, q, E, wVal, tVal, feVal, mVal) {
     const origenY = 40; 
     const longitudCuerda = canvas.height * 0.55; 
 
+    // Aquí está la clave: Hacia dónde debe inclinarse la bolita
+    // Si carga y campo tienen mismo signo (+ con +) o (- con -), va a la derecha (1). 
+    // Si tienen signos opuestos, va a la izquierda (-1).
     const direccionDesvio = (q * E >= 0) ? 1 : -1;
     const thetaRad = theta * (Math.PI / 180) * direccionDesvio;
 
@@ -226,12 +218,24 @@ function dibujarDCL(theta, q, E, wVal, tVal, feVal, mVal) {
     ctx.strokeStyle = isDarkMode ? '#555' : '#aaa'; ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(origenX, origenY); ctx.lineTo(origenX, canvas.height - 15); ctx.stroke();
     
-    // Arco de Ángulo
+    // --- CORRECCIÓN DEL ARCO DEL ÁNGULO ---
     if (Math.abs(theta) > 1) {
         ctx.beginPath();
-        const startAngle = direccionDesvio === 1 ? Math.PI/2 - Math.abs(thetaRad) : Math.PI/2;
-        const endAngle = direccionDesvio === 1 ? Math.PI/2 : Math.PI/2 - Math.abs(thetaRad);
-        ctx.arc(origenX, origenY, 50, startAngle, endAngle, direccionDesvio === -1);
+        // Si va a la derecha (1), el arco empieza en el eje vertical (PI/2) y baja.
+        // Si va a la izquierda (-1), el arco debe reflejarse.
+        let startAngle, endAngle, anticlockwise;
+        
+        if (direccionDesvio === 1) {
+            startAngle = Math.PI / 2 - thetaRad; // Ángulo de la cuerda
+            endAngle = Math.PI / 2;              // Eje vertical
+            anticlockwise = false;
+        } else {
+            startAngle = Math.PI / 2;            // Eje vertical
+            endAngle = Math.PI / 2 - thetaRad;   // Ángulo de la cuerda (que es negativo)
+            anticlockwise = true;
+        }
+
+        ctx.arc(origenX, origenY, 50, startAngle, endAngle, anticlockwise);
         ctx.strokeStyle = '#007bff'; ctx.lineWidth = 2; ctx.stroke();
         dibujarTextoFondo(ctx, `θ = ${theta.toFixed(1)}°`, origenX + (direccionDesvio * 20), origenY + 65, '#007bff');
     }
@@ -248,6 +252,7 @@ function dibujarDCL(theta, q, E, wVal, tVal, feVal, mVal) {
     const vecScale = canvas.height / 350;
     dibujarFlecha(ctx, px, py, origenX, origenY, '#007bff', `T=${tVal.toPrecision(3)}N`, vecScale);
     dibujarFlecha(ctx, px, py, px, py + 60 * vecScale, '#28a745', `W=${wVal.toPrecision(3)}N`, vecScale);
+    // Fuerza eléctrica apunta hacia el lado que se desvía
     dibujarFlecha(ctx, px, py, px + (70 * vecScale * direccionDesvio), py, '#dc3545', `Fe=${feVal.toPrecision(3)}N`, vecScale);
 
     // Partícula
@@ -258,7 +263,7 @@ function dibujarDCL(theta, q, E, wVal, tVal, feVal, mVal) {
     ctx.shadowBlur = 0;
     ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
     
-    // --- Carga Dinámica con Unidad Real ---
+    // Texto Carga
     ctx.fillStyle = 'white'; ctx.textAlign = 'center'; ctx.font = "bold 11px Arial";
     const qSelect = document.getElementById('unidad-carga');
     const qUnitText = qSelect.options[qSelect.selectedIndex].text; 
@@ -266,7 +271,7 @@ function dibujarDCL(theta, q, E, wVal, tVal, feVal, mVal) {
     let qMostrar = (q / qMult).toPrecision(3);
     ctx.fillText(`${q > 0 ? '+' : ''}${qMostrar} ${qUnitText}`, px, py + 4);
 
-    // --- Masa Debajo de la Esfera ---
+    // Texto Masa
     const mSelect = document.getElementById('unidad-masa');
     const mUnitText = mSelect.options[mSelect.selectedIndex].text; 
     const mMult = parseFloat(mSelect.value);
@@ -428,6 +433,10 @@ function inicializarCanvasResponsivo() {
     window.addEventListener('resize', () => { if (partX !== 0) ejecutarSimulacion(true); });
 }
 
+// =========================================================
+// CORRECCIÓN 2: ARRASTRE INTELIGENTE (BIDERECCIONAL)
+// =========================================================
+
 function inicializarEventosDrag() {
     const canvas = document.getElementById('lienzo');
     if (!canvas) return;
@@ -471,11 +480,27 @@ function inicializarEventosDrag() {
         const dx = pos.x - origenX;
         const dy = pos.y - origenY;
 
+        // Calculamos el ángulo absoluto (siempre positivo para la casilla del formulario)
         let newTheta = Math.atan2(Math.abs(dx), dy) * (180 / Math.PI);
         if (newTheta < 0) newTheta = 0;
         if (newTheta > 85) newTheta = 85; 
 
         document.getElementById('angulo').value = newTheta.toFixed(2);
+        
+        // --- LOGICA DE CAMBIO DE SIGNO SEGÚN EL LADO AL QUE ARRASTRES ---
+        // Si dx es negativo (lado izquierdo) pero el campo E es positivo, la carga DEBE ser negativa
+        let E = leerInputConUnidad('campo', 'unidad-campo');
+        let qEl = document.getElementById('carga');
+        
+        if (qEl && qEl.value !== "") {
+            let qActual = parseFloat(qEl.value);
+            // Si el mouse está a la izquierda y el campo es +, o el mouse está a la derecha y el campo es -
+            if ((dx < 0 && E > 0) || (dx > 0 && E < 0)) {
+                if (qActual > 0) qEl.value = -Math.abs(qActual); // Fuerza negativo
+            } else {
+                if (qActual < 0) qEl.value = Math.abs(qActual);  // Fuerza positivo
+            }
+        }
         
         if(document.getElementById(ultimaVariableCalculada)) document.getElementById(ultimaVariableCalculada).value = "";
         ['peso', 'tension', 'fuerza'].forEach(id => { if(document.getElementById(id)) document.getElementById(id).value = ""; });
