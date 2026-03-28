@@ -244,12 +244,23 @@ function dibujarDCL(theta, q, E, wVal, tVal, feVal, mVal) {
     ctx.setLineDash([5, 5]); ctx.strokeStyle = isDark ? '#555' : '#aaa'; 
     ctx.beginPath(); ctx.moveTo(origenX, origenY); ctx.lineTo(origenX, canvas.height - 15); ctx.stroke();
     
+    // --- SOLUCIÓN DEL ARCO VISUAL ---
     if (Math.abs(safeTheta) > 1) {
-        ctx.beginPath(); let sA, eA, ac;
-        if (direccionDesvio === 1) { sA = Math.PI/2 - thetaRad; eA = Math.PI/2; ac = false; } else { sA = Math.PI/2; eA = Math.PI/2 - thetaRad; ac = true; }
-        ctx.arc(origenX, origenY, 50, sA, eA, ac); ctx.strokeStyle = '#007bff'; ctx.lineWidth = 2; ctx.stroke();
-        dibujarTextoFondo(ctx, `θ = ${safeTheta.toFixed(1)}°`, origenX + (direccionDesvio * 20), origenY + 65, '#007bff');
+        ctx.beginPath();
+        let startAngle = Math.PI / 2; // 90 grados (apuntando hacia abajo)
+        let thetaRadAbs = Math.abs(safeTheta) * (Math.PI / 180);
+        
+        // Si va a la derecha (1), el arco va de 90 a 90-theta (anticlockwise = true)
+        // Si va a la izquierda (-1), el arco va de 90 a 90+theta (anticlockwise = false)
+        let endAngle = direccionDesvio === 1 ? (Math.PI / 2 - thetaRadAbs) : (Math.PI / 2 + thetaRadAbs);
+        let anticlockwise = direccionDesvio === 1 ? true : false;
+        
+        ctx.arc(origenX, origenY, 50, startAngle, endAngle, anticlockwise);
+        ctx.strokeStyle = '#007bff'; ctx.lineWidth = 2; ctx.stroke();
+        dibujarTextoFondo(ctx, `θ = ${Math.abs(safeTheta).toFixed(1)}°`, origenX + (direccionDesvio * 25), origenY + 65, '#007bff');
     }
+    // --- FIN SOLUCIÓN DEL ARCO ---
+
     ctx.setLineDash([]);
 
     ctx.strokeStyle = '#aaa'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(origenX - 50, origenY); ctx.lineTo(origenX + 50, origenY); ctx.stroke();
@@ -263,7 +274,6 @@ function dibujarDCL(theta, q, E, wVal, tVal, feVal, mVal) {
     ctx.beginPath(); ctx.arc(px, py, 18, 0, Math.PI * 2); ctx.fillStyle = (safeNum(q) && q >= 0) ? '#ff5722' : '#3f51b5'; ctx.fill();
     ctx.fillStyle = 'white'; ctx.textAlign = 'center'; 
     
-    // --- SOLUCIÓN VISUAL: Adaptar tamaño de texto si es notación científica
     let qMostrar = safeNum(q) ? safePrecision(q / getSelectVal('unidad-carga'), 3) : "?";
     ctx.font = qMostrar.length > 5 ? "bold 9px Arial" : "bold 11px Arial";
     ctx.fillText(`${(safeNum(q) && q > 0) ? '+' : ''}${qMostrar} ${getSelectText('unidad-carga', 'C')}`, px, py + 4);
@@ -305,7 +315,6 @@ function ejecutarSimulacionKinematics() {
     if (gk === undefined) gk = 9.8;
     if (ax === undefined) ax = 0; 
 
-    // --- SOLUCIÓN DE JERARQUÍA: v0 y Ángulo mandan. Si existen, ignoramos los inputs manuales erróneos.
     if (v0 !== undefined && theta_deg !== undefined) {
         rmax_input = undefined;
         hmax_input = undefined;
@@ -454,11 +463,25 @@ function iniciarAnimacionKinematics(v0x, v0y, ax, gy, t_flight, Rmax, Hmax) {
         ctx.shadowBlur = 0; ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
         
         ctx.font = "bold 12px Arial"; ctx.fillStyle = isDarkMode() ? '#fff' : '#333'; ctx.textAlign = 'left'; 
-        let textoPosX = px + 15 > canvas.width - 120 ? px - 120 : px + 15; 
+        
+        // --- SOLUCIÓN DE TEXTO CORTADO ---
+        let text1 = `t: ${elapsed_sec.toFixed(2)}s | x: ${cur_x.toFixed(1)}m | y: ${cur_y.toFixed(1)}m`;
+        let text2 = `|V|: ${cur_v.toFixed(1)}m/s`;
+        
+        // Calculamos cuánto miden los textos realmente
+        let textWidth = Math.max(ctx.measureText(text1).width, ctx.measureText(text2).width);
+        
+        let textoPosX = px + 15;
+        // Si el texto se va a salir de la pantalla por la derecha, lo forzamos a dibujarse a la izquierda
+        if (textoPosX + textWidth > canvas.width - 10) {
+            textoPosX = px - textWidth - 15;
+        }
+        
         let textoPosY = py - 30 < 20 ? py + 30 : py - 30; 
         
-        ctx.fillText(`t: ${elapsed_sec.toFixed(2)}s | x: ${cur_x.toFixed(1)}m | y: ${cur_y.toFixed(1)}m`, textoPosX, textoPosY);
-        ctx.fillText(`|V|: ${cur_v.toFixed(1)}m/s`, textoPosX, textoPosY + 15);
+        ctx.fillText(text1, textoPosX, textoPosY);
+        ctx.fillText(text2, textoPosX, textoPosY + 15);
+        // --- FIN SOLUCIÓN ---
     }
     animar();
 }
@@ -496,7 +519,6 @@ function dibujarFlecha(ctx, fromx, fromy, tox, toy, color, texto, scale) {
     
     if (texto !== '') {
         ctx.font = `bold ${12 * scale}px Arial`;
-        // --- SOLUCIÓN VISUAL: Distancia dinámica para que el texto no tape la partícula ---
         let textDist = 25 * scale; 
         ctx.fillText(texto, tox + textDist * Math.cos(angle), toy + textDist * Math.sin(angle) + 5);
     }
