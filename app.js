@@ -34,7 +34,6 @@ function leerInputConUnidad(idInput, idSelect) {
 }
 
 function formatearNumero(num) {
-    // Protección estricta contra datos vacíos o corruptos
     if (num === undefined || num === null || isNaN(num)) return "-";
     if (num === 0) return "0";
     if (Math.abs(num) < 0.001 || Math.abs(num) >= 10000) return num.toExponential(2);
@@ -198,7 +197,6 @@ function ejecutarSimulacionElectrostatics(esArrastre = false) {
     }
 
     dibujarDCL(theta, q, E, W, T, Fe, m);
-    // Firma correcta: tipo, masa, angulo, v0, campo, carga, T_Rmax, Fe_Hmax
     if (!esArrastre) agregarHistorial('Eléctrico', m, theta, undefined, E, q, T, Fe);
 }
 
@@ -273,84 +271,155 @@ function dibujarDCL(theta, q, E, wVal, tVal, feVal, mVal) {
 }
 
 // =========================================================
-// MÓDULO 3: CINEMÁTICA (TIRO PARABÓLICO PASO A PASO)
+// MÓDULO 3: CINEMÁTICA INTELIGENTE 
 // =========================================================
 
 function ejecutarSimulacionKinematics() {
     let registro = ["=== PROCEDIMIENTO MATEMÁTICO (CINEMÁTICA) ==="];
     let bloquePrincipal = [];
+    let logSet = new Set();
     
     function addStep(titulo, formula, sustitucion, resultado) {
-        bloquePrincipal.push(`\n> ${titulo}`);
-        bloquePrincipal.push(`  Fórmula: ${formula}`);
-        bloquePrincipal.push(`  Sustitución: ${sustitucion}`);
-        bloquePrincipal.push(`  Resultado: ${resultado}`);
+        let key = titulo;
+        if (!logSet.has(key)) {
+            logSet.add(key);
+            bloquePrincipal.push(`\n> ${titulo}`);
+            if(formula) bloquePrincipal.push(`  Fórmula: ${formula}`);
+            if(sustitucion) bloquePrincipal.push(`  Sustitución: ${sustitucion}`);
+            bloquePrincipal.push(`  Resultado: ${resultado}`);
+        }
     }
     
+    // Leemos todos los inputs posibles
     let v0 = leerInputConUnidad('v0_k', 'unidad-v0_k');
     let theta_deg = leerInputConUnidad('angulo_k', null);
     let gk = leerInputConUnidad('g_k', null);
     let ax = leerInputConUnidad('ax_k', null);
-
-    if (v0 === undefined || theta_deg === undefined || gk === undefined || ax === undefined) {
-        mostrarNotificacion(`Faltan datos. Ingresa v₀, Ángulo, Gravedad y aₓ.`, 'error'); return;
-    }
-    if (v0 < 0 || gk <= 0) {
-        mostrarNotificacion(`Valores inválidos. Velocidad y Gravedad deben ser positivos.`, 'error'); return;
-    }
-
-    let theta_rad = theta_deg * (Math.PI / 180);
     
-    let v0x = v0 * Math.cos(theta_rad);
-    let v0y = v0 * Math.sin(theta_rad);
-    
-    addStep("1. Componentes de la Velocidad Inicial", 
-            "v₀ₓ = v₀ · cos(θ)  |  v₀ᵧ = v₀ · sin(θ)", 
-            `v₀ₓ = ${v0} · cos(${theta_deg}°) | v₀ᵧ = ${v0} · sin(${theta_deg}°)`, 
-            `v₀ₓ = ${v0x.toFixed(2)} m/s,  v₀ᵧ = ${v0y.toFixed(2)} m/s`);
+    let rmax_input = leerInputConUnidad('rmax_k', 'unidad-rmax_k');
+    let hmax_input = leerInputConUnidad('hmax_k', 'unidad-hmax_k');
+    let t_input = leerInputConUnidad('t_k', 'unidad-t_k');
 
-    let t_Hmax = v0y / gk;
-    let t_flight = 2 * t_Hmax;
-    addStep("2. Tiempos de Vuelo (Eje Vertical)", 
-            "t_subida = v₀ᵧ / g  |  t_total = 2 · t_subida", 
-            `t_subida = ${v0y.toFixed(2)} / ${gk}  |  t_total = 2 · ${t_Hmax.toFixed(2)}`, 
-            `t_subida = ${t_Hmax.toFixed(2)} s,  t_total = ${t_flight.toFixed(2)} s`);
+    // Valores por defecto si no se llenaron
+    if (gk === undefined) gk = 9.8;
+    if (ax === undefined) ax = 0; // Aceleración en X es 0 por defecto si está vacío
 
-    let Hmax = (v0y * v0y) / (2 * gk);
-    addStep("3. Altura Máxima (Hmax)", 
-            "Hmax = (v₀ᵧ)² / 2g", 
-            `Hmax = (${v0y.toFixed(2)})² / (2 · ${gk})`, 
-            `Hmax = ${Hmax.toFixed(2)} m`);
+    // --- MOTOR DE CÁLCULO INVERSO ---
+    try {
+        // Ciclo para deducir variables (similar a electrostática)
+        for(let i=0; i<3; i++) {
+            // 1. Si tengo v0 y ángulo, calculo lo demás (Ruta directa)
+            if (v0 !== undefined && theta_deg !== undefined && (rmax_input === undefined || hmax_input === undefined || t_input === undefined)) {
+                let theta_rad = theta_deg * (Math.PI / 180);
+                let v0x = v0 * Math.cos(theta_rad);
+                let v0y = v0 * Math.sin(theta_rad);
+                
+                if (t_input === undefined) {
+                    t_input = 2 * (v0y / gk);
+                    addStep("Calculando Tiempo Total (t)", "t = 2(v₀·sin(θ))/g", `t = 2(${v0}·sin(${theta_deg}°))/${gk}`, `t = ${t_input.toFixed(2)} s`);
+                }
+                if (hmax_input === undefined) {
+                    hmax_input = (v0y * v0y) / (2 * gk);
+                    addStep("Calculando Altura Máxima (Hmax)", "Hmax = (v₀·sin(θ))² / 2g", `Hmax = (${v0y.toFixed(2)})² / (2·${gk})`, `Hmax = ${hmax_input.toFixed(2)} m`);
+                }
+                if (rmax_input === undefined) {
+                    rmax_input = (v0x * t_input) + (0.5 * ax * t_input * t_input);
+                    addStep("Calculando Alcance (Rmax)", "Rmax = v₀ₓ·t + ½aₓ·t²", `Rmax = (${v0x.toFixed(2)}·${t_input.toFixed(2)}) + 0.5(${ax})(${t_input.toFixed(2)})²`, `Rmax = ${rmax_input.toFixed(2)} m`);
+                }
+            }
+            
+            // 2. Si tengo Alcance (Rmax) y Ángulo, pero no v0 (ax=0 asumido para no complicar la inversa cuadrática)
+            if (rmax_input !== undefined && theta_deg !== undefined && v0 === undefined && ax === 0) {
+                let theta_rad = theta_deg * (Math.PI / 180);
+                v0 = Math.sqrt((rmax_input * gk) / Math.sin(2 * theta_rad));
+                addStep("Despejando Velocidad Inicial (v₀) desde Rmax", "v₀ = √(Rmax·g / sin(2θ))", `v₀ = √(${rmax_input}·${gk} / sin(${2*theta_deg}°))`, `v₀ = ${v0.toFixed(2)} m/s`);
+            }
+            
+            // 3. Si tengo Altura (Hmax) y Ángulo, pero no v0
+            if (hmax_input !== undefined && theta_deg !== undefined && v0 === undefined) {
+                let theta_rad = theta_deg * (Math.PI / 180);
+                let v0y = Math.sqrt(2 * gk * hmax_input);
+                v0 = v0y / Math.sin(theta_rad);
+                addStep("Despejando Velocidad Inicial (v₀) desde Hmax", "v₀ = √(2g·Hmax) / sin(θ)", `v₀ = √(2·${gk}·${hmax_input}) / sin(${theta_deg}°)`, `v₀ = ${v0.toFixed(2)} m/s`);
+            }
+            
+            // 4. Si tengo v0 y Rmax, pero no Ángulo (ax=0 asumido)
+            if (v0 !== undefined && rmax_input !== undefined && theta_deg === undefined && ax === 0) {
+                let sin2theta = (rmax_input * gk) / (v0 * v0);
+                if(sin2theta > 1) throw new Error("Ese alcance es imposible con esa velocidad inicial.");
+                theta_deg = (Math.asin(sin2theta) / 2) * (180 / Math.PI);
+                addStep("Despejando Ángulo (θ) desde Rmax", "θ = ½ arcsin(Rmax·g / v₀²)", `θ = ½ arcsin(${rmax_input}·${gk} / ${v0}²)`, `θ = ${theta_deg.toFixed(2)}°`);
+            }
+        }
+    } catch(err) {
+        mostrarNotificacion(err.message, 'error');
+        document.getElementById('consola-pasos').innerText = "❌ Error: " + err.message;
+        return;
+    }
 
-    let Rmax = (v0x * t_flight) + (0.5 * ax * t_flight * t_flight);
-    addStep("4. Alcance Máximo Horizontal (Rmax)", 
-            "Rmax = v₀ₓ·t + ½·aₓ·t²", 
-            `Rmax = (${v0x.toFixed(2)} · ${t_flight.toFixed(2)}) + 0.5(${ax})(${t_flight.toFixed(2)})²`, 
-            `Rmax = ${Rmax.toFixed(2)} m`);
+    // Verificación final: Si no pudimos deducir v0 y angulo, no podemos dibujar
+    if (v0 === undefined || theta_deg === undefined) {
+        mostrarNotificacion(`Faltan datos. Ingresa al menos (v₀ y θ) o (Rmax y θ).`, 'error'); 
+        return;
+    }
+
+    // --- Devolver valores calculados a los inputs ---
+    const asignarSeguroK = (idInput, valor, idUnidad) => {
+        const input = document.getElementById(idInput);
+        if (!input || valor === undefined || isNaN(valor)) return;
+        const factor = idUnidad ? parseFloat(document.getElementById(idUnidad).value) : 1;
+        input.value = parseFloat((valor / factor).toPrecision(5));
+    };
+
+    asignarSeguroK('v0_k', v0, 'unidad-v0_k');
+    asignarSeguroK('angulo_k', theta_deg, null);
+    asignarSeguroK('rmax_k', rmax_input, 'unidad-rmax_k');
+    asignarSeguroK('hmax_k', hmax_input, 'unidad-hmax_k');
+    asignarSeguroK('t_k', t_input, 'unidad-t_k');
     
     registro = registro.concat(bloquePrincipal);
     registro.push(`\n=== TRAYECTORIA CALCULADA. ANIMANDO... ===`);
     document.getElementById('consola-pasos').innerText = registro.join('\n');
     
-    iniciarAnimacionKinematics(v0x, v0y, ax, gk, t_flight, Rmax, Hmax);
+    // Preparar variables puras para la animación
+    let theta_rad = theta_deg * (Math.PI / 180);
+    let v0x = v0 * Math.cos(theta_rad);
+    let v0y = v0 * Math.sin(theta_rad);
     
-    // Firma correcta: tipo, masa, angulo, v0, campo, carga, T_Rmax, Fe_Hmax
-    agregarHistorial('Proyectil', undefined, theta_deg, v0, undefined, undefined, Rmax, Hmax);
+    iniciarAnimacionKinematics(v0x, v0y, ax, gk, t_input, rmax_input, hmax_input);
+    
+    agregarHistorial('Proyectil', undefined, theta_deg, v0, undefined, undefined, rmax_input, hmax_input);
 }
 
 function iniciarAnimacionKinematics(v0x, v0y, ax, gy, t_flight, Rmax, Hmax) {
     const canvas = document.getElementById('lienzo');
     const ctx = canvas.getContext('2d');
+    const wrapper = canvas.parentElement;
+    canvas.width = wrapper.clientWidth; 
+    canvas.height = window.innerWidth >= 768 ? 450 : Math.max(wrapper.clientWidth * 0.75, 280); 
     
     if (estadoSimulador.animacionActiva) cancelAnimationFrame(estadoSimulador.animacionActiva);
     let startTime = DateOfNow();
     
-    let scaleY = (canvas.height * 0.55) / (Hmax > 0.1 ? Hmax : 1); 
-    let scaleX = scaleY; 
-    if (Math.abs(Rmax) * scaleX > canvas.width * 0.8) { scaleX = (canvas.width * 0.8) / Math.abs(Rmax); scaleY = scaleX; }
+    // --- LÓGICA DE ESCALA ARREGLADA ---
+    // Encontramos el punto más lejano en X (Rmax absoluto)
+    const padding = 40; // Pixeles de margen
+    const availableWidth = canvas.width - (padding * 2);
+    const availableHeight = canvas.height - (padding * 2);
+    
+    let maxAbsX = Math.abs(Rmax) < 0.1 ? 1 : Math.abs(Rmax);
+    let maxAbsY = Hmax < 0.1 ? 1 : Hmax;
 
-    const offsetX = canvas.width * 0.1;
-    const offsetY = canvas.height * 0.8;
+    // Calcular factores de escala independientemente
+    let scaleX = availableWidth / maxAbsX;
+    let scaleY = availableHeight / maxAbsY;
+    
+    // Forzamos que la escala sea uniforme (la menor de las dos) para no deformar la parábola
+    let scaleUniform = Math.min(scaleX, scaleY);
+    
+    // El punto de origen en pantalla
+    const offsetX = padding;
+    const offsetY = canvas.height - padding; // Base del canvas
 
     function animar() {
         let elapsed_sec = (DateOfNow() - startTime) / 1000 * 1.5; 
@@ -358,8 +427,10 @@ function iniciarAnimacionKinematics(v0x, v0y, ax, gy, t_flight, Rmax, Hmax) {
         } else { estadoSimulador.animacionActiva = requestAnimationFrame(animar); }
 
         ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        // Dibujar Suelo
         ctx.strokeStyle = isDarkMode() ? '#444' : '#ccc'; ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.moveTo(canvas.width * 0.05, canvas.height * 0.8); ctx.lineTo(canvas.width * 0.95, canvas.height * 0.8); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(0, offsetY); ctx.lineTo(canvas.width, offsetY); ctx.stroke();
 
         let cur_x = (v0x * elapsed_sec) + (0.5 * ax * elapsed_sec * elapsed_sec);
         let cur_y = (v0y * elapsed_sec) - (0.5 * gy * elapsed_sec * elapsed_sec);
@@ -367,28 +438,39 @@ function iniciarAnimacionKinematics(v0x, v0y, ax, gy, t_flight, Rmax, Hmax) {
         let cur_vy = v0y - (gy * elapsed_sec);
         let cur_v = Math.sqrt(cur_vx*cur_vx + cur_vy*cur_vy);
 
-        let px = offsetX + (cur_x * scaleX);
-        let py = offsetY - (cur_y * scaleY);
+        // Transformación matemática a píxeles usando la escala uniforme
+        let px = offsetX + (cur_x * scaleUniform);
+        let py = offsetY - (cur_y * scaleUniform);
 
+        // Dibujar Rastro
         ctx.beginPath(); ctx.lineWidth = 2; ctx.strokeStyle = isDarkMode() ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.3)'; ctx.setLineDash([5, 5]);
         for (let t = 0; t <= t_flight; t += t_flight/50) {
-            let path_x = offsetX + ((v0x * t) + (0.5 * ax * t * t)) * scaleX;
-            let path_y = offsetY - ((v0y * t) - (0.5 * gy * t * t)) * scaleY;
+            let path_x = offsetX + ((v0x * t) + (0.5 * ax * t * t)) * scaleUniform;
+            let path_y = offsetY - ((v0y * t) - (0.5 * gy * t * t)) * scaleUniform;
             t === 0 ? ctx.moveTo(path_x, path_y) : ctx.lineTo(path_x, path_y);
         }
         ctx.stroke(); ctx.setLineDash([]);
 
-        const vecS = canvas.height / 350; const sF = 5; 
-        dibujarFlecha(ctx, px, py, px + cur_vx * vecS * sF * scaleX/scaleY, py, '#28a745', '', vecS); 
-        dibujarFlecha(ctx, px, py, px, py - cur_vy * vecS * sF, '#dc3545', '', vecS); 
-        dibujarFlecha(ctx, px, py, px + cur_vx * vecS * sF * scaleX/scaleY, py - cur_vy * vecS * sF, '#007bff', '', vecS); 
+        // Vectores dinámicos escalados para que no se vean gigantes (tamaño fijo en pantalla)
+        const vectorLen = 40; 
+        let dir_x = cur_vx === 0 ? 0 : (cur_vx / cur_v) * vectorLen;
+        let dir_y = cur_vy === 0 ? 0 : (cur_vy / cur_v) * vectorLen;
+        
+        dibujarFlecha(ctx, px, py, px + dir_x, py, '#28a745', '', 1); // Vx
+        dibujarFlecha(ctx, px, py, px, py - dir_y, '#dc3545', '', 1); // Vy
+        dibujarFlecha(ctx, px, py, px + dir_x, py - dir_y, '#007bff', '', 1); // V total
 
-        ctx.beginPath(); ctx.arc(px, py, 12, 0, Math.PI * 2); ctx.fillStyle = '#ff6b6b'; ctx.shadowBlur = 10; ctx.shadowColor = '#ff6b6b'; ctx.fill(); 
+        // Partícula
+        ctx.beginPath(); ctx.arc(px, py, 8, 0, Math.PI * 2); ctx.fillStyle = '#ff6b6b'; ctx.shadowBlur = 10; ctx.shadowColor = '#ff6b6b'; ctx.fill(); 
         ctx.shadowBlur = 0; ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
         
+        // Textos flotantes reajustados
         ctx.font = "bold 12px Arial"; ctx.fillStyle = isDarkMode() ? '#fff' : '#333'; ctx.textAlign = 'left'; 
-        ctx.fillText(`t: ${elapsed_sec.toFixed(2)}s | x: ${cur_x.toFixed(1)}m | y: ${cur_y.toFixed(1)}m`, px, py - 25);
-        ctx.fillText(`|V|: ${cur_v.toFixed(1)}m/s`, px + 30, py + 30);
+        let textoPosX = px + 15 > canvas.width - 120 ? px - 120 : px + 15; // Evita que se salga por la derecha
+        let textoPosY = py - 30 < 20 ? py + 30 : py - 30; // Evita que se salga por arriba
+        
+        ctx.fillText(`t: ${elapsed_sec.toFixed(2)}s | x: ${cur_x.toFixed(1)}m | y: ${cur_y.toFixed(1)}m`, textoPosX, textoPosY);
+        ctx.fillText(`|V|: ${cur_v.toFixed(1)}m/s`, textoPosX, textoPosY + 15);
     }
     animar();
 }
@@ -434,7 +516,6 @@ function dibujarFlecha(ctx, fromx, fromy, tox, toy, color, texto, scale) {
 function isDarkMode() { return document.body.getAttribute('data-theme') === 'dark'; }
 function DateOfNow() { return new Date().getTime(); }
 
-// Firma unificada para recibir correctamente datos de ambas físicas
 function agregarHistorial(tipo, m, theta, v0, E, q, T_or_Rmax, Fe_or_Hmax) {
     const tableBody = document.querySelector('#tabla-resultados tbody');
     if (!tableBody) return;
@@ -458,7 +539,7 @@ function limpiarTodo() {
     if (estadoSimulador.tema === 'electrostatics') {
         ['masa', 'angulo', 'campo', 'carga', 'peso', 'tension', 'fuerza'].forEach(id => { if(document.getElementById(id)) document.getElementById(id).value = ""; });
     } else {
-        ['v0_k', 'angulo_k'].forEach(id => { if(document.getElementById(id)) document.getElementById(id).value = ""; });
+        ['v0_k', 'angulo_k', 'rmax_k', 'hmax_k', 't_k'].forEach(id => { if(document.getElementById(id)) document.getElementById(id).value = ""; });
         document.getElementById('g_k').value = 9.8;
         document.getElementById('ax_k').value = 0;
     }
