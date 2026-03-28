@@ -261,9 +261,11 @@ function dibujarDCL(theta, q, E, wVal, tVal, feVal, mVal) {
     dibujarFlecha(ctx, px, py, px + (70 * vecScale * direccionDesvio), py, '#dc3545', `Fe=${safePrecision(feVal, 3)}N`, vecScale);
 
     ctx.beginPath(); ctx.arc(px, py, 18, 0, Math.PI * 2); ctx.fillStyle = (safeNum(q) && q >= 0) ? '#ff5722' : '#3f51b5'; ctx.fill();
-    ctx.fillStyle = 'white'; ctx.textAlign = 'center'; ctx.font = "bold 11px Arial";
+    ctx.fillStyle = 'white'; ctx.textAlign = 'center'; 
     
+    // --- SOLUCIÓN VISUAL: Adaptar tamaño de texto si es notación científica
     let qMostrar = safeNum(q) ? safePrecision(q / getSelectVal('unidad-carga'), 3) : "?";
+    ctx.font = qMostrar.length > 5 ? "bold 9px Arial" : "bold 11px Arial";
     ctx.fillText(`${(safeNum(q) && q > 0) ? '+' : ''}${qMostrar} ${getSelectText('unidad-carga', 'C')}`, px, py + 4);
     
     let mMostrar = safeNum(mVal) ? safePrecision(mVal / getSelectVal('unidad-masa'), 3) : "?";
@@ -302,6 +304,13 @@ function ejecutarSimulacionKinematics() {
 
     if (gk === undefined) gk = 9.8;
     if (ax === undefined) ax = 0; 
+
+    // --- SOLUCIÓN DE JERARQUÍA: v0 y Ángulo mandan. Si existen, ignoramos los inputs manuales erróneos.
+    if (v0 !== undefined && theta_deg !== undefined) {
+        rmax_input = undefined;
+        hmax_input = undefined;
+        t_input = undefined;
+    }
 
     try {
         for(let i=0; i<3; i++) {
@@ -487,7 +496,8 @@ function dibujarFlecha(ctx, fromx, fromy, tox, toy, color, texto, scale) {
     
     if (texto !== '') {
         ctx.font = `bold ${12 * scale}px Arial`;
-        const textDist = 15 * scale;
+        // --- SOLUCIÓN VISUAL: Distancia dinámica para que el texto no tape la partícula ---
+        let textDist = 25 * scale; 
         ctx.fillText(texto, tox + textDist * Math.cos(angle), toy + textDist * Math.sin(angle) + 5);
     }
 }
@@ -580,28 +590,23 @@ function inicializarEventosDrag() {
         }
         ['peso', 'tension', 'fuerza'].forEach(id => { if(document.getElementById(id)) document.getElementById(id).value = ""; }); ejecutarSimulacionElectrostatics(false); } } }
     
-    // --- NUEVO: Evento de Doble Clic para invertir la polaridad de la carga ---
     function alDobleClic(e) {
         if (estadoSimulador.tema !== 'electrostatics') return;
         let pos = obtenerPos(e); if (!pos) return;
         
-        // Verifica si el doble clic ocurrió sobre la carga
         if (Math.hypot(pos.x - partX, pos.y - partY) < 35) {
             let qEl = document.getElementById('carga');
             if (qEl && qEl.value !== "") {
                 let qActual = parseFloat(qEl.value);
                 if (!isNaN(qActual) && qActual !== 0) {
-                    // Invertimos el signo
                     qEl.value = (qActual * -1).toString(); 
                     
-                    // Limpiamos los campos calculados para forzar la actualización
                     ['peso', 'tension', 'fuerza'].forEach(id => { if(document.getElementById(id)) document.getElementById(id).value = ""; });
                     if (ultimaVariableCalculada && ultimaVariableCalculada !== 'angulo' && ultimaVariableCalculada !== 'carga') {
                         let el = document.getElementById(ultimaVariableCalculada);
                         if (el) el.value = "";
                     }
                     
-                    // Recalculamos
                     ejecutarSimulacionElectrostatics(false);
                 }
             }
@@ -611,7 +616,6 @@ function inicializarEventosDrag() {
     canvas.addEventListener('mousedown', alPresionar); canvas.addEventListener('mousemove', alMover); window.addEventListener('mouseup', alSoltar); 
     canvas.addEventListener('touchstart', alPresionar, {passive: false}); canvas.addEventListener('touchmove', alMover, {passive: false}); window.addEventListener('touchend', alSoltar);
     
-    // Añadimos el Event Listener del doble clic
     canvas.addEventListener('dblclick', alDobleClic);
 }
 
