@@ -120,7 +120,6 @@ function ejecutarSimulacionElectrostatics(esArrastre = false) {
 
     let conteoInputs = [m, theta, E, q, W, T, Fe].filter(v => v !== undefined).length;
     
-    // --- SOLUCIÓN: Exigimos solo 2 parámetros (ej. Masa y Ángulo) en lugar de 3
     if (conteoInputs < 2 && !esArrastre) {
         mostrarNotificacion(`Faltan datos. Ingresa al menos 2 parámetros para calcular.`, 'error');
         return;
@@ -540,17 +539,19 @@ function inyectarModalConfirmacion() { if (document.getElementById('modal-confir
 function limpiarHistorial() { const tbody = document.querySelector('#tabla-resultados tbody'); if (tbody && tbody.rows.length > 0) { document.getElementById('modal-confirmacion').classList.add('active'); } else { mostrarNotificacion("El historial ya está vacío.", 'info'); } }
 
 // =========================================================
-// MÓDULO 5: DRAG & DROP (ELECTROSTÁTICA)
+// MÓDULO 5: DRAG & DROP (ELECTROSTÁTICA) Y EVENTOS EXTRA
 // =========================================================
 
 function inicializarEventosDrag() {
     const canvas = document.getElementById('lienzo');
     function obtenerPos(e) { let rect = canvas.getBoundingClientRect(); let evt = e.touches ? e.touches[0] : e; if (!evt) return null; return { x: (evt.clientX - rect.left) * (canvas.width / rect.width), y: (evt.clientY - rect.top) * (canvas.height / rect.height) }; }
+    
     function alPresionar(e) {
         if (estadoSimulador.tema !== 'electrostatics') return; 
         let pos = obtenerPos(e); if (!pos) return;
         if (Math.hypot(pos.x - partX, pos.y - partY) < 35) { isDragging = true; draggedOnce = false; canvas.style.cursor = 'grabbing'; if (ultimaVariableCalculada === 'angulo' || !ultimaVariableCalculada) ultimaVariableCalculada = 'carga'; if (e.type === 'touchstart') e.preventDefault(); }
     }
+    
     function alMover(e) {
         if (estadoSimulador.tema !== 'electrostatics' || !isDragging) { if (estadoSimulador.tema === 'electrostatics') { let pos = obtenerPos(e); if (pos) canvas.style.cursor = Math.hypot(pos.x - partX, pos.y - partY) < 35 ? 'grab' : 'default'; } return; }
         if (e.type === 'touchmove') e.preventDefault(); draggedOnce = true;
@@ -563,7 +564,6 @@ function inicializarEventosDrag() {
         let E = leerInputConUnidad('campo', 'unidad-campo'); let qEl = document.getElementById('carga');
         if (qEl && qEl.value !== "") { let qActual = parseFloat(qEl.value); if ((dx < 0 && E > 0) || (dx > 0 && E < 0)) { if (qActual > 0) qEl.value = -Math.abs(qActual); } else { if (qActual < 0) qEl.value = Math.abs(qActual); } }
         
-        // --- SOLUCIÓN: Protegemos el ángulo para que no se borre por accidente
         if (ultimaVariableCalculada && ultimaVariableCalculada !== 'angulo') {
             let el = document.getElementById(ultimaVariableCalculada);
             if (el) el.value = "";
@@ -572,13 +572,47 @@ function inicializarEventosDrag() {
         ['peso', 'tension', 'fuerza'].forEach(id => { if(document.getElementById(id)) document.getElementById(id).value = ""; });
         ejecutarSimulacionElectrostatics(true); 
     }
+    
     function alSoltar(e) { if (isDragging) { isDragging = false; canvas.style.cursor = 'grab'; if (draggedOnce) { 
         if (ultimaVariableCalculada && ultimaVariableCalculada !== 'angulo') {
             let el = document.getElementById(ultimaVariableCalculada);
             if (el) el.value = "";
         }
         ['peso', 'tension', 'fuerza'].forEach(id => { if(document.getElementById(id)) document.getElementById(id).value = ""; }); ejecutarSimulacionElectrostatics(false); } } }
-    canvas.addEventListener('mousedown', alPresionar); canvas.addEventListener('mousemove', alMover); window.addEventListener('mouseup', alSoltar); canvas.addEventListener('touchstart', alPresionar, {passive: false}); canvas.addEventListener('touchmove', alMover, {passive: false}); window.addEventListener('touchend', alSoltar);
+    
+    // --- NUEVO: Evento de Doble Clic para invertir la polaridad de la carga ---
+    function alDobleClic(e) {
+        if (estadoSimulador.tema !== 'electrostatics') return;
+        let pos = obtenerPos(e); if (!pos) return;
+        
+        // Verifica si el doble clic ocurrió sobre la carga
+        if (Math.hypot(pos.x - partX, pos.y - partY) < 35) {
+            let qEl = document.getElementById('carga');
+            if (qEl && qEl.value !== "") {
+                let qActual = parseFloat(qEl.value);
+                if (!isNaN(qActual) && qActual !== 0) {
+                    // Invertimos el signo
+                    qEl.value = (qActual * -1).toString(); 
+                    
+                    // Limpiamos los campos calculados para forzar la actualización
+                    ['peso', 'tension', 'fuerza'].forEach(id => { if(document.getElementById(id)) document.getElementById(id).value = ""; });
+                    if (ultimaVariableCalculada && ultimaVariableCalculada !== 'angulo' && ultimaVariableCalculada !== 'carga') {
+                        let el = document.getElementById(ultimaVariableCalculada);
+                        if (el) el.value = "";
+                    }
+                    
+                    // Recalculamos
+                    ejecutarSimulacionElectrostatics(false);
+                }
+            }
+        }
+    }
+
+    canvas.addEventListener('mousedown', alPresionar); canvas.addEventListener('mousemove', alMover); window.addEventListener('mouseup', alSoltar); 
+    canvas.addEventListener('touchstart', alPresionar, {passive: false}); canvas.addEventListener('touchmove', alMover, {passive: false}); window.addEventListener('touchend', alSoltar);
+    
+    // Añadimos el Event Listener del doble clic
+    canvas.addEventListener('dblclick', alDobleClic);
 }
 
 document.addEventListener('DOMContentLoaded', () => {
