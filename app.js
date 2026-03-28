@@ -34,6 +34,8 @@ function leerInputConUnidad(idInput, idSelect) {
 }
 
 function formatearNumero(num) {
+    // Protección estricta contra datos vacíos o corruptos
+    if (num === undefined || num === null || isNaN(num)) return "-";
     if (num === 0) return "0";
     if (Math.abs(num) < 0.001 || Math.abs(num) >= 10000) return num.toExponential(2);
     return parseFloat(num.toPrecision(4)).toString(); 
@@ -170,7 +172,6 @@ function ejecutarSimulacionElectrostatics(esArrastre = false) {
         document.getElementById('consola-pasos').innerText = "❌ Error: " + error.message; return;
     }
 
-    // --- NUEVO CÓDIGO: Asignación segura al DOM ---
     const asignarSeguro = (idInput, valor, idUnidad) => {
         const input = document.getElementById(idInput);
         if (!input || valor === undefined || isNaN(valor)) return;
@@ -190,7 +191,6 @@ function ejecutarSimulacionElectrostatics(esArrastre = false) {
     asignarSeguro('peso', W, 'unidad-peso');
     asignarSeguro('tension', T, 'unidad-tension');
     asignarSeguro('fuerza', Fe, 'unidad-fuerza');
-    // --- FIN NUEVO CÓDIGO ---
 
     if (!esArrastre) {
         registro = registro.concat(bloquePrincipal);
@@ -198,7 +198,8 @@ function ejecutarSimulacionElectrostatics(esArrastre = false) {
     }
 
     dibujarDCL(theta, q, E, W, T, Fe, m);
-    if (!esArrastre) agregarHistorial('Eléctrico', m, theta, E, q, T, Fe, undefined);
+    // Firma correcta: tipo, masa, angulo, v0, campo, carga, T_Rmax, Fe_Hmax
+    if (!esArrastre) agregarHistorial('Eléctrico', m, theta, undefined, E, q, T, Fe);
 }
 
 function dibujarDCL(theta, q, E, wVal, tVal, feVal, mVal) {
@@ -210,7 +211,6 @@ function dibujarDCL(theta, q, E, wVal, tVal, feVal, mVal) {
     canvas.height = window.innerWidth >= 768 ? 450 : Math.max(wrapper.clientWidth * 0.75, 280); 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
-    // Funciones de seguridad internas para evitar crasheos por "undefined" o "NaN"
     const safeNum = (val) => (val !== undefined && val !== null && !isNaN(val));
     const safePrecision = (val, prec) => safeNum(val) ? val.toPrecision(prec) : "?";
     const getSelectText = (id, def) => {
@@ -264,7 +264,6 @@ function dibujarDCL(theta, q, E, wVal, tVal, feVal, mVal) {
     ctx.beginPath(); ctx.arc(px, py, 18, 0, Math.PI * 2); ctx.fillStyle = (safeNum(q) && q >= 0) ? '#ff5722' : '#3f51b5'; ctx.fill();
     ctx.fillStyle = 'white'; ctx.textAlign = 'center'; ctx.font = "bold 11px Arial";
     
-    // Lectura segura de los textos de unidades
     let qMostrar = safeNum(q) ? safePrecision(q / getSelectVal('unidad-carga'), 3) : "?";
     ctx.fillText(`${(safeNum(q) && q > 0) ? '+' : ''}${qMostrar} ${getSelectText('unidad-carga', 'C')}`, px, py + 4);
     
@@ -272,6 +271,7 @@ function dibujarDCL(theta, q, E, wVal, tVal, feVal, mVal) {
     ctx.fillStyle = isDark ? '#ccc' : '#555'; ctx.font = "bold 12px Arial"; 
     ctx.fillText(`m = ${mMostrar} ${getSelectText('unidad-masa', 'kg')}`, px, py + 35);
 }
+
 // =========================================================
 // MÓDULO 3: CINEMÁTICA (TIRO PARABÓLICO PASO A PASO)
 // =========================================================
@@ -301,7 +301,6 @@ function ejecutarSimulacionKinematics() {
 
     let theta_rad = theta_deg * (Math.PI / 180);
     
-    // Desglose Paso a Paso
     let v0x = v0 * Math.cos(theta_rad);
     let v0y = v0 * Math.sin(theta_rad);
     
@@ -335,8 +334,8 @@ function ejecutarSimulacionKinematics() {
     
     iniciarAnimacionKinematics(v0x, v0y, ax, gk, t_flight, Rmax, Hmax);
     
-    // Agregamos al historial adaptando las columnas (T/Rmax y Fe/Hmax)
-    agregarHistorial('Proyectil', undefined, theta_deg, undefined, undefined, undefined, Rmax, Hmax, v0);
+    // Firma correcta: tipo, masa, angulo, v0, campo, carga, T_Rmax, Fe_Hmax
+    agregarHistorial('Proyectil', undefined, theta_deg, v0, undefined, undefined, Rmax, Hmax);
 }
 
 function iniciarAnimacionKinematics(v0x, v0y, ax, gy, t_flight, Rmax, Hmax) {
@@ -398,7 +397,6 @@ function iniciarAnimacionKinematics(v0x, v0y, ax, gy, t_flight, Rmax, Hmax) {
 // MÓDULO 4: UI COMÚN & HISTORIAL 
 // =========================================================
 
-// --- NUEVAS FUNCIONES AUXILIARES DE DIBUJO ---
 function dibujarTextoFondo(ctx, texto, x, y, colorText) {
     ctx.font = "bold 12px Arial";
     const textWidth = ctx.measureText(texto).width;
@@ -419,40 +417,29 @@ function dibujarFlecha(ctx, fromx, fromy, tox, toy, color, texto, scale) {
     ctx.fillStyle = color;
     ctx.lineWidth = 2 * scale;
     
-    // Línea de la flecha
-    ctx.beginPath();
-    ctx.moveTo(fromx, fromy);
-    ctx.lineTo(tox, toy);
-    ctx.stroke();
-    
-    // Cabeza de la flecha
+    ctx.beginPath(); ctx.moveTo(fromx, fromy); ctx.lineTo(tox, toy); ctx.stroke();
     ctx.beginPath();
     ctx.moveTo(tox, toy);
     ctx.lineTo(tox - headlen * Math.cos(angle - Math.PI / 6), toy - headlen * Math.sin(angle - Math.PI / 6));
     ctx.lineTo(tox - headlen * Math.cos(angle + Math.PI / 6), toy - headlen * Math.sin(angle + Math.PI / 6));
     ctx.fill();
     
-    // Texto opcional
     if (texto !== '') {
         ctx.font = `bold ${12 * scale}px Arial`;
         const textDist = 15 * scale;
         ctx.fillText(texto, tox + textDist * Math.cos(angle), toy + textDist * Math.sin(angle) + 5);
     }
 }
-// --- FIN NUEVAS FUNCIONES ---
 
 function isDarkMode() { return document.body.getAttribute('data-theme') === 'dark'; }
 function DateOfNow() { return new Date().getTime(); }
 
-function agregarHistorial(tipo, m, theta, E, q, T, Fe, v0) {
+// Firma unificada para recibir correctamente datos de ambas físicas
+function agregarHistorial(tipo, m, theta, v0, E, q, T_or_Rmax, Fe_or_Hmax) {
     const tableBody = document.querySelector('#tabla-resultados tbody');
     if (!tableBody) return;
     const row = tableBody.insertRow(0);
     row.style.animation = "fadeIn 0.4s ease-out";
-    
-    // Adaptamos las columnas si es Proyectil (T -> Rmax, Fe -> Hmax)
-    let colT = (tipo === 'Proyectil') ? formatearNumero(T) : formatearNumero(T); // Reusamos variable T para Rmax si es proyectil
-    let colFe = (tipo === 'Proyectil') ? formatearNumero(Fe) : formatearNumero(Fe); // Reusamos variable Fe para Hmax
     
     row.innerHTML = `
         <td><span style="background:var(--primary);color:white;padding:2px 6px;border-radius:4px;font-size:0.75rem;">${tipo}</span></td>
@@ -461,8 +448,8 @@ function agregarHistorial(tipo, m, theta, E, q, T, Fe, v0) {
         <td>${v0 !== undefined ? formatearNumero(v0) : '-'}</td>
         <td>${E !== undefined ? formatearNumero(E) : '-'}</td>
         <td>${q !== undefined ? formatearNumero(q) : '-'}</td>
-        <td>${colT !== undefined ? colT : '-'}</td>
-        <td>${colFe !== undefined ? colFe : '-'}</td>
+        <td>${T_or_Rmax !== undefined ? formatearNumero(T_or_Rmax) : '-'}</td>
+        <td>${Fe_or_Hmax !== undefined ? formatearNumero(Fe_or_Hmax) : '-'}</td>
     `;
     if (window.innerWidth < 768 && tableBody.rows.length > 5) tableBody.deleteRow(5);
 }
