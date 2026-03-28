@@ -120,13 +120,13 @@
                         <div class="input-grupo">
                             <label>Velocidad Inicial (v₀):</label>
                             <div class="input-with-select">
-                                <input type="number" id="v0_k" placeholder="Ej. 25">
+                                <input type="number" id="v0_k" placeholder="Opcional">
                                 <select id="unidad-v0_k"><option value="1">m/s</option><option value="0.277778">km/h</option></select>
                             </div>
                         </div>
                         <div class="input-grupo">
                             <label>Ángulo (θ):</label>
-                            <input type="number" id="angulo_k" placeholder="Ej. 45">
+                            <input type="number" id="angulo_k" placeholder="Opcional">
                         </div>
                     </div>
 
@@ -138,13 +138,37 @@
                         </div>
                         <div class="input-grupo">
                             <label>Aceleración X (aₓ):</label>
-                            <input type="number" id="ax_k" value="0">
+                            <input type="number" id="ax_k" value="0" placeholder="Opcional">
                         </div>
                     </div>
 
-                    <button id="btn-lanzar-kinematics" class="btn-principal full-width btn-exito">Lanzar Proyectil</button>
-                </div>
+                    <h3>3. Resultados / Objetivos</h3>
+                    <div class="grid-inputs">
+                        <div class="input-grupo">
+                            <label>Alcance (Rmax):</label>
+                            <div class="input-with-select">
+                                <input type="number" id="rmax_k" placeholder="Opcional">
+                                <select id="unidad-rmax_k"><option value="1">m</option><option value="1000">km</option></select>
+                            </div>
+                        </div>
+                        <div class="input-grupo">
+                            <label>Altura (Hmax):</label>
+                            <div class="input-with-select">
+                                <input type="number" id="hmax_k" placeholder="Opcional">
+                                <select id="unidad-hmax_k"><option value="1">m</option><option value="1000">km</option></select>
+                            </div>
+                        </div>
+                        <div class="input-grupo" style="grid-column: span 2;">
+                            <label>Tiempo de Vuelo (t):</label>
+                            <div class="input-with-select">
+                                <input type="number" id="t_k" placeholder="Opcional">
+                                <select id="unidad-t_k"><option value="1">s</option></select>
+                            </div>
+                        </div>
+                    </div>
 
+                    <button id="btn-lanzar-kinematics" class="btn-principal full-width btn-exito">Resolver y Lanzar</button>
+                </div>
                 <div id="panel-ejemplos-estatico" class="card modulo-inputs examples-card">
                     <h2>🎯 Ejemplos Rápidos</h2>
                     <div class="ejemplos-botones-grid">
