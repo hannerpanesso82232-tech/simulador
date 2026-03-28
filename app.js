@@ -90,7 +90,7 @@ function inicializarConvertidores() {
 }
 
 // =========================================================
-// MÓDULO 2: ELECTROSTÁTICA 
+// MÓDULO 2: ELECTROSTÁTICA INTELIGENTE
 // =========================================================
 
 function ejecutarSimulacionElectrostatics(esArrastre = false) {
@@ -109,6 +109,19 @@ function ejecutarSimulacionElectrostatics(esArrastre = false) {
         }
     }
 
+    // --- NUEVA LÓGICA: Determinar qué variable vamos a recalcular al arrastrar
+    let m_str = document.getElementById('masa') ? document.getElementById('masa').value : "";
+    let E_str = document.getElementById('campo') ? document.getElementById('campo').value : "";
+    let q_str = document.getElementById('carga') ? document.getElementById('carga').value : "";
+    
+    if (!esArrastre) {
+        // Detectamos cuál dejaste en blanco para convertirlo en el objetivo de arrastre
+        if (q_str === "") ultimaVariableCalculada = 'carga';
+        else if (E_str === "") ultimaVariableCalculada = 'campo';
+        else if (m_str === "") ultimaVariableCalculada = 'masa';
+        else ultimaVariableCalculada = 'carga'; // Por defecto si llenaste todo
+    }
+
     let m = leerInputConUnidad('masa', 'unidad-masa');
     let theta = leerInputConUnidad('angulo', null);
     let E = leerInputConUnidad('campo', 'unidad-campo');
@@ -120,8 +133,14 @@ function ejecutarSimulacionElectrostatics(esArrastre = false) {
 
     let conteoInputs = [m, theta, E, q, W, T, Fe].filter(v => v !== undefined).length;
     
-    if (conteoInputs < 2 && !esArrastre) {
-        mostrarNotificacion(`Faltan datos. Ingresa al menos 2 parámetros para calcular.`, 'error');
+    // --- Lógica Estricta de 3 parámetros ---
+    if (conteoInputs < 3) {
+        if (!esArrastre) {
+            mostrarNotificacion(`Faltan datos. La física requiere 3 parámetros fijos (ej: Masa, Campo y Ángulo).`, 'error');
+        } else {
+            // Si arrastra pero no tiene datos fijos, dibujamos con interrogaciones suavemente
+            dibujarDCL(theta, q, E, W, T, Fe, m);
+        }
         return;
     }
 
@@ -244,14 +263,10 @@ function dibujarDCL(theta, q, E, wVal, tVal, feVal, mVal) {
     ctx.setLineDash([5, 5]); ctx.strokeStyle = isDark ? '#555' : '#aaa'; 
     ctx.beginPath(); ctx.moveTo(origenX, origenY); ctx.lineTo(origenX, canvas.height - 15); ctx.stroke();
     
-    // --- SOLUCIÓN DEL ARCO VISUAL ---
     if (Math.abs(safeTheta) > 1) {
         ctx.beginPath();
-        let startAngle = Math.PI / 2; // 90 grados (apuntando hacia abajo)
+        let startAngle = Math.PI / 2;
         let thetaRadAbs = Math.abs(safeTheta) * (Math.PI / 180);
-        
-        // Si va a la derecha (1), el arco va de 90 a 90-theta (anticlockwise = true)
-        // Si va a la izquierda (-1), el arco va de 90 a 90+theta (anticlockwise = false)
         let endAngle = direccionDesvio === 1 ? (Math.PI / 2 - thetaRadAbs) : (Math.PI / 2 + thetaRadAbs);
         let anticlockwise = direccionDesvio === 1 ? true : false;
         
@@ -259,7 +274,6 @@ function dibujarDCL(theta, q, E, wVal, tVal, feVal, mVal) {
         ctx.strokeStyle = '#007bff'; ctx.lineWidth = 2; ctx.stroke();
         dibujarTextoFondo(ctx, `θ = ${Math.abs(safeTheta).toFixed(1)}°`, origenX + (direccionDesvio * 25), origenY + 65, '#007bff');
     }
-    // --- FIN SOLUCIÓN DEL ARCO ---
 
     ctx.setLineDash([]);
 
@@ -464,15 +478,12 @@ function iniciarAnimacionKinematics(v0x, v0y, ax, gy, t_flight, Rmax, Hmax) {
         
         ctx.font = "bold 12px Arial"; ctx.fillStyle = isDarkMode() ? '#fff' : '#333'; ctx.textAlign = 'left'; 
         
-        // --- SOLUCIÓN DE TEXTO CORTADO ---
         let text1 = `t: ${elapsed_sec.toFixed(2)}s | x: ${cur_x.toFixed(1)}m | y: ${cur_y.toFixed(1)}m`;
         let text2 = `|V|: ${cur_v.toFixed(1)}m/s`;
         
-        // Calculamos cuánto miden los textos realmente
         let textWidth = Math.max(ctx.measureText(text1).width, ctx.measureText(text2).width);
         
         let textoPosX = px + 15;
-        // Si el texto se va a salir de la pantalla por la derecha, lo forzamos a dibujarse a la izquierda
         if (textoPosX + textWidth > canvas.width - 10) {
             textoPosX = px - textWidth - 15;
         }
@@ -481,7 +492,6 @@ function iniciarAnimacionKinematics(v0x, v0y, ax, gy, t_flight, Rmax, Hmax) {
         
         ctx.fillText(text1, textoPosX, textoPosY);
         ctx.fillText(text2, textoPosX, textoPosY + 15);
-        // --- FIN SOLUCIÓN ---
     }
     animar();
 }
@@ -581,7 +591,10 @@ function inicializarEventosDrag() {
     function alPresionar(e) {
         if (estadoSimulador.tema !== 'electrostatics') return; 
         let pos = obtenerPos(e); if (!pos) return;
-        if (Math.hypot(pos.x - partX, pos.y - partY) < 35) { isDragging = true; draggedOnce = false; canvas.style.cursor = 'grabbing'; if (ultimaVariableCalculada === 'angulo' || !ultimaVariableCalculada) ultimaVariableCalculada = 'carga'; if (e.type === 'touchstart') e.preventDefault(); }
+        if (Math.hypot(pos.x - partX, pos.y - partY) < 35) { 
+            isDragging = true; draggedOnce = false; canvas.style.cursor = 'grabbing'; 
+            if (e.type === 'touchstart') e.preventDefault(); 
+        }
     }
     
     function alMover(e) {
