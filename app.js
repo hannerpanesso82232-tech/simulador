@@ -119,8 +119,10 @@ function ejecutarSimulacionElectrostatics(esArrastre = false) {
     let Fe = leerInputConUnidad('fuerza', 'unidad-fuerza');
 
     let conteoInputs = [m, theta, E, q, W, T, Fe].filter(v => v !== undefined).length;
-    if (conteoInputs < 3 && !esArrastre) {
-        mostrarNotificacion(`Faltan datos. Ingresa al menos 3 parámetros.`, 'error');
+    
+    // --- SOLUCIÓN: Exigimos solo 2 parámetros (ej. Masa y Ángulo) en lugar de 3
+    if (conteoInputs < 2 && !esArrastre) {
+        mostrarNotificacion(`Faltan datos. Ingresa al menos 2 parámetros para calcular.`, 'error');
         return;
     }
 
@@ -290,7 +292,6 @@ function ejecutarSimulacionKinematics() {
         }
     }
     
-    // Leemos todos los inputs posibles
     let v0 = leerInputConUnidad('v0_k', 'unidad-v0_k');
     let theta_deg = leerInputConUnidad('angulo_k', null);
     let gk = leerInputConUnidad('g_k', null);
@@ -300,15 +301,11 @@ function ejecutarSimulacionKinematics() {
     let hmax_input = leerInputConUnidad('hmax_k', 'unidad-hmax_k');
     let t_input = leerInputConUnidad('t_k', 'unidad-t_k');
 
-    // Valores por defecto si no se llenaron
     if (gk === undefined) gk = 9.8;
-    if (ax === undefined) ax = 0; // Aceleración en X es 0 por defecto si está vacío
+    if (ax === undefined) ax = 0; 
 
-    // --- MOTOR DE CÁLCULO INVERSO ---
     try {
-        // Ciclo para deducir variables (similar a electrostática)
         for(let i=0; i<3; i++) {
-            // 1. Si tengo v0 y ángulo, calculo lo demás (Ruta directa)
             if (v0 !== undefined && theta_deg !== undefined && (rmax_input === undefined || hmax_input === undefined || t_input === undefined)) {
                 let theta_rad = theta_deg * (Math.PI / 180);
                 let v0x = v0 * Math.cos(theta_rad);
@@ -328,14 +325,12 @@ function ejecutarSimulacionKinematics() {
                 }
             }
             
-            // 2. Si tengo Alcance (Rmax) y Ángulo, pero no v0 (ax=0 asumido para no complicar la inversa cuadrática)
             if (rmax_input !== undefined && theta_deg !== undefined && v0 === undefined && ax === 0) {
                 let theta_rad = theta_deg * (Math.PI / 180);
                 v0 = Math.sqrt((rmax_input * gk) / Math.sin(2 * theta_rad));
                 addStep("Despejando Velocidad Inicial (v₀) desde Rmax", "v₀ = √(Rmax·g / sin(2θ))", `v₀ = √(${rmax_input}·${gk} / sin(${2*theta_deg}°))`, `v₀ = ${v0.toFixed(2)} m/s`);
             }
             
-            // 3. Si tengo Altura (Hmax) y Ángulo, pero no v0
             if (hmax_input !== undefined && theta_deg !== undefined && v0 === undefined) {
                 let theta_rad = theta_deg * (Math.PI / 180);
                 let v0y = Math.sqrt(2 * gk * hmax_input);
@@ -343,7 +338,6 @@ function ejecutarSimulacionKinematics() {
                 addStep("Despejando Velocidad Inicial (v₀) desde Hmax", "v₀ = √(2g·Hmax) / sin(θ)", `v₀ = √(2·${gk}·${hmax_input}) / sin(${theta_deg}°)`, `v₀ = ${v0.toFixed(2)} m/s`);
             }
             
-            // 4. Si tengo v0 y Rmax, pero no Ángulo (ax=0 asumido)
             if (v0 !== undefined && rmax_input !== undefined && theta_deg === undefined && ax === 0) {
                 let sin2theta = (rmax_input * gk) / (v0 * v0);
                 if(sin2theta > 1) throw new Error("Ese alcance es imposible con esa velocidad inicial.");
@@ -357,13 +351,11 @@ function ejecutarSimulacionKinematics() {
         return;
     }
 
-    // Verificación final: Si no pudimos deducir v0 y angulo, no podemos dibujar
     if (v0 === undefined || theta_deg === undefined) {
         mostrarNotificacion(`Faltan datos. Ingresa al menos (v₀ y θ) o (Rmax y θ).`, 'error'); 
         return;
     }
 
-    // --- Devolver valores calculados a los inputs ---
     const asignarSeguroK = (idInput, valor, idUnidad) => {
         const input = document.getElementById(idInput);
         if (!input || valor === undefined || isNaN(valor)) return;
@@ -381,7 +373,6 @@ function ejecutarSimulacionKinematics() {
     registro.push(`\n=== TRAYECTORIA CALCULADA. ANIMANDO... ===`);
     document.getElementById('consola-pasos').innerText = registro.join('\n');
     
-    // Preparar variables puras para la animación
     let theta_rad = theta_deg * (Math.PI / 180);
     let v0x = v0 * Math.cos(theta_rad);
     let v0y = v0 * Math.sin(theta_rad);
@@ -401,25 +392,20 @@ function iniciarAnimacionKinematics(v0x, v0y, ax, gy, t_flight, Rmax, Hmax) {
     if (estadoSimulador.animacionActiva) cancelAnimationFrame(estadoSimulador.animacionActiva);
     let startTime = DateOfNow();
     
-    // --- LÓGICA DE ESCALA ARREGLADA ---
-    // Encontramos el punto más lejano en X (Rmax absoluto)
-    const padding = 40; // Pixeles de margen
+    const padding = 40; 
     const availableWidth = canvas.width - (padding * 2);
     const availableHeight = canvas.height - (padding * 2);
     
     let maxAbsX = Math.abs(Rmax) < 0.1 ? 1 : Math.abs(Rmax);
     let maxAbsY = Hmax < 0.1 ? 1 : Hmax;
 
-    // Calcular factores de escala independientemente
     let scaleX = availableWidth / maxAbsX;
     let scaleY = availableHeight / maxAbsY;
     
-    // Forzamos que la escala sea uniforme (la menor de las dos) para no deformar la parábola
     let scaleUniform = Math.min(scaleX, scaleY);
     
-    // El punto de origen en pantalla
     const offsetX = padding;
-    const offsetY = canvas.height - padding; // Base del canvas
+    const offsetY = canvas.height - padding; 
 
     function animar() {
         let elapsed_sec = (DateOfNow() - startTime) / 1000 * 1.5; 
@@ -428,7 +414,6 @@ function iniciarAnimacionKinematics(v0x, v0y, ax, gy, t_flight, Rmax, Hmax) {
 
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         
-        // Dibujar Suelo
         ctx.strokeStyle = isDarkMode() ? '#444' : '#ccc'; ctx.lineWidth = 2;
         ctx.beginPath(); ctx.moveTo(0, offsetY); ctx.lineTo(canvas.width, offsetY); ctx.stroke();
 
@@ -438,11 +423,9 @@ function iniciarAnimacionKinematics(v0x, v0y, ax, gy, t_flight, Rmax, Hmax) {
         let cur_vy = v0y - (gy * elapsed_sec);
         let cur_v = Math.sqrt(cur_vx*cur_vx + cur_vy*cur_vy);
 
-        // Transformación matemática a píxeles usando la escala uniforme
         let px = offsetX + (cur_x * scaleUniform);
         let py = offsetY - (cur_y * scaleUniform);
 
-        // Dibujar Rastro
         ctx.beginPath(); ctx.lineWidth = 2; ctx.strokeStyle = isDarkMode() ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.3)'; ctx.setLineDash([5, 5]);
         for (let t = 0; t <= t_flight; t += t_flight/50) {
             let path_x = offsetX + ((v0x * t) + (0.5 * ax * t * t)) * scaleUniform;
@@ -451,23 +434,20 @@ function iniciarAnimacionKinematics(v0x, v0y, ax, gy, t_flight, Rmax, Hmax) {
         }
         ctx.stroke(); ctx.setLineDash([]);
 
-        // Vectores dinámicos escalados para que no se vean gigantes (tamaño fijo en pantalla)
         const vectorLen = 40; 
         let dir_x = cur_vx === 0 ? 0 : (cur_vx / cur_v) * vectorLen;
         let dir_y = cur_vy === 0 ? 0 : (cur_vy / cur_v) * vectorLen;
         
-        dibujarFlecha(ctx, px, py, px + dir_x, py, '#28a745', '', 1); // Vx
-        dibujarFlecha(ctx, px, py, px, py - dir_y, '#dc3545', '', 1); // Vy
-        dibujarFlecha(ctx, px, py, px + dir_x, py - dir_y, '#007bff', '', 1); // V total
+        dibujarFlecha(ctx, px, py, px + dir_x, py, '#28a745', '', 1); 
+        dibujarFlecha(ctx, px, py, px, py - dir_y, '#dc3545', '', 1); 
+        dibujarFlecha(ctx, px, py, px + dir_x, py - dir_y, '#007bff', '', 1); 
 
-        // Partícula
         ctx.beginPath(); ctx.arc(px, py, 8, 0, Math.PI * 2); ctx.fillStyle = '#ff6b6b'; ctx.shadowBlur = 10; ctx.shadowColor = '#ff6b6b'; ctx.fill(); 
         ctx.shadowBlur = 0; ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
         
-        // Textos flotantes reajustados
         ctx.font = "bold 12px Arial"; ctx.fillStyle = isDarkMode() ? '#fff' : '#333'; ctx.textAlign = 'left'; 
-        let textoPosX = px + 15 > canvas.width - 120 ? px - 120 : px + 15; // Evita que se salga por la derecha
-        let textoPosY = py - 30 < 20 ? py + 30 : py - 30; // Evita que se salga por arriba
+        let textoPosX = px + 15 > canvas.width - 120 ? px - 120 : px + 15; 
+        let textoPosY = py - 30 < 20 ? py + 30 : py - 30; 
         
         ctx.fillText(`t: ${elapsed_sec.toFixed(2)}s | x: ${cur_x.toFixed(1)}m | y: ${cur_y.toFixed(1)}m`, textoPosX, textoPosY);
         ctx.fillText(`|V|: ${cur_v.toFixed(1)}m/s`, textoPosX, textoPosY + 15);
@@ -582,11 +562,22 @@ function inicializarEventosDrag() {
         
         let E = leerInputConUnidad('campo', 'unidad-campo'); let qEl = document.getElementById('carga');
         if (qEl && qEl.value !== "") { let qActual = parseFloat(qEl.value); if ((dx < 0 && E > 0) || (dx > 0 && E < 0)) { if (qActual > 0) qEl.value = -Math.abs(qActual); } else { if (qActual < 0) qEl.value = Math.abs(qActual); } }
-        if(document.getElementById(ultimaVariableCalculada)) document.getElementById(ultimaVariableCalculada).value = "";
+        
+        // --- SOLUCIÓN: Protegemos el ángulo para que no se borre por accidente
+        if (ultimaVariableCalculada && ultimaVariableCalculada !== 'angulo') {
+            let el = document.getElementById(ultimaVariableCalculada);
+            if (el) el.value = "";
+        }
+        
         ['peso', 'tension', 'fuerza'].forEach(id => { if(document.getElementById(id)) document.getElementById(id).value = ""; });
         ejecutarSimulacionElectrostatics(true); 
     }
-    function alSoltar(e) { if (isDragging) { isDragging = false; canvas.style.cursor = 'grab'; if (draggedOnce) { if(document.getElementById(ultimaVariableCalculada)) document.getElementById(ultimaVariableCalculada).value = ""; ['peso', 'tension', 'fuerza'].forEach(id => { if(document.getElementById(id)) document.getElementById(id).value = ""; }); ejecutarSimulacionElectrostatics(false); } } }
+    function alSoltar(e) { if (isDragging) { isDragging = false; canvas.style.cursor = 'grab'; if (draggedOnce) { 
+        if (ultimaVariableCalculada && ultimaVariableCalculada !== 'angulo') {
+            let el = document.getElementById(ultimaVariableCalculada);
+            if (el) el.value = "";
+        }
+        ['peso', 'tension', 'fuerza'].forEach(id => { if(document.getElementById(id)) document.getElementById(id).value = ""; }); ejecutarSimulacionElectrostatics(false); } } }
     canvas.addEventListener('mousedown', alPresionar); canvas.addEventListener('mousemove', alMover); window.addEventListener('mouseup', alSoltar); canvas.addEventListener('touchstart', alPresionar, {passive: false}); canvas.addEventListener('touchmove', alMover, {passive: false}); window.addEventListener('touchend', alSoltar);
 }
 
