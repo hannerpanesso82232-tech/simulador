@@ -160,13 +160,27 @@ function ejecutarSimulacionElectrostatics(esArrastre = false) {
         document.getElementById('consola-pasos').innerText = "❌ Error: " + error.message; return;
     }
 
-    if(document.getElementById('masa') && m !== undefined) document.getElementById('masa').value = parseFloat((m / parseFloat(document.getElementById('unidad-masa').value)).toPrecision(5));
-    if(document.getElementById('angulo') && theta !== undefined) document.getElementById('angulo').value = parseFloat(theta.toPrecision(5));
-    if(document.getElementById('campo') && E !== undefined) document.getElementById('campo').value = parseFloat((E / parseFloat(document.getElementById('unidad-campo').value)).toPrecision(5));
-    if(document.getElementById('carga') && q !== undefined) document.getElementById('carga').value = parseFloat((q / parseFloat(document.getElementById('unidad-carga').value)).toPrecision(5));
-    if(document.getElementById('peso') && W !== undefined) document.getElementById('peso').value = parseFloat((W / parseFloat(document.getElementById('unidad-peso').value)).toPrecision(5));
-    if(document.getElementById('tension') && T !== undefined) document.getElementById('tension').value = parseFloat((T / parseFloat(document.getElementById('unidad-tension').value)).toPrecision(5));
-    if(document.getElementById('fuerza') && Fe !== undefined) document.getElementById('fuerza').value = parseFloat((Fe / parseFloat(document.getElementById('unidad-fuerza').value)).toPrecision(5));
+    // --- NUEVO CÓDIGO: Asignación segura al DOM ---
+    const asignarSeguro = (idInput, valor, idUnidad) => {
+        const input = document.getElementById(idInput);
+        if (!input || valor === undefined || isNaN(valor)) return;
+        
+        const factor = idUnidad ? parseFloat(document.getElementById(idUnidad).value) : 1;
+        const valorFinal = valor / factor;
+        
+        if (!isNaN(valorFinal) && isFinite(valorFinal)) {
+            input.value = parseFloat(valorFinal.toPrecision(5));
+        }
+    };
+
+    asignarSeguro('masa', m, 'unidad-masa');
+    asignarSeguro('angulo', theta, null);
+    asignarSeguro('campo', E, 'unidad-campo');
+    asignarSeguro('carga', q, 'unidad-carga');
+    asignarSeguro('peso', W, 'unidad-peso');
+    asignarSeguro('tension', T, 'unidad-tension');
+    asignarSeguro('fuerza', Fe, 'unidad-fuerza');
+    // --- FIN NUEVO CÓDIGO ---
 
     if (!esArrastre) {
         registro = registro.concat(bloquePrincipal);
@@ -350,6 +364,49 @@ function iniciarAnimacionKinematics(v0x, v0y, ax, gy, t_flight, Rmax, Hmax) {
 // =========================================================
 // MÓDULO 4: UI COMÚN & HISTORIAL 
 // =========================================================
+
+// --- NUEVAS FUNCIONES AUXILIARES DE DIBUJO ---
+function dibujarTextoFondo(ctx, texto, x, y, colorText) {
+    ctx.font = "bold 12px Arial";
+    const textWidth = ctx.measureText(texto).width;
+    ctx.fillStyle = document.body.getAttribute('data-theme') === 'dark' ? 'rgba(30, 30, 30, 0.8)' : 'rgba(255, 255, 255, 0.8)';
+    ctx.fillRect(x - (textWidth / 2) - 4, y - 12, textWidth + 8, 16);
+    ctx.fillStyle = colorText;
+    ctx.textAlign = 'center';
+    ctx.fillText(texto, x, y);
+}
+
+function dibujarFlecha(ctx, fromx, fromy, tox, toy, color, texto, scale) {
+    const headlen = 10 * scale; 
+    const dx = tox - fromx;
+    const dy = toy - fromy;
+    const angle = Math.atan2(dy, dx);
+    
+    ctx.strokeStyle = color;
+    ctx.fillStyle = color;
+    ctx.lineWidth = 2 * scale;
+    
+    // Línea de la flecha
+    ctx.beginPath();
+    ctx.moveTo(fromx, fromy);
+    ctx.lineTo(tox, toy);
+    ctx.stroke();
+    
+    // Cabeza de la flecha
+    ctx.beginPath();
+    ctx.moveTo(tox, toy);
+    ctx.lineTo(tox - headlen * Math.cos(angle - Math.PI / 6), toy - headlen * Math.sin(angle - Math.PI / 6));
+    ctx.lineTo(tox - headlen * Math.cos(angle + Math.PI / 6), toy - headlen * Math.sin(angle + Math.PI / 6));
+    ctx.fill();
+    
+    // Texto opcional
+    if (texto !== '') {
+        ctx.font = `bold ${12 * scale}px Arial`;
+        const textDist = 15 * scale;
+        ctx.fillText(texto, tox + textDist * Math.cos(angle), toy + textDist * Math.sin(angle) + 5);
+    }
+}
+// --- FIN NUEVAS FUNCIONES ---
 
 function isDarkMode() { return document.body.getAttribute('data-theme') === 'dark'; }
 function DateOfNow() { return new Date().getTime(); }
