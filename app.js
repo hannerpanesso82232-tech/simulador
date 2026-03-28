@@ -19,8 +19,18 @@ let ultimaVariableCalculada = 'carga';
 function leerInputConUnidad(idInput, idSelect) {
     const el = document.getElementById(idInput);
     if (!el || el.value === "") return undefined;
-    const mult = (idSelect && document.getElementById(idSelect)) ? parseFloat(document.getElementById(idSelect).value) : 1;
-    return parseFloat(el.value) * mult;
+    
+    let mult = 1;
+    if (idSelect) {
+        const selEl = document.getElementById(idSelect);
+        if (selEl && selEl.value !== "") {
+            let parsed = parseFloat(selEl.value);
+            if (!isNaN(parsed)) mult = parsed;
+        }
+    }
+    
+    let parsedVal = parseFloat(el.value);
+    return isNaN(parsedVal) ? undefined : parsedVal * mult;
 }
 
 function formatearNumero(num) {
@@ -193,32 +203,53 @@ function ejecutarSimulacionElectrostatics(esArrastre = false) {
 
 function dibujarDCL(theta, q, E, wVal, tVal, feVal, mVal) {
     const canvas = document.getElementById('lienzo');
+    if (!canvas) return;
     const ctx = canvas.getContext('2d');
     const wrapper = canvas.parentElement;
-    canvas.width = wrapper.clientWidth; canvas.height = window.innerWidth >= 768 ? 450 : Math.max(wrapper.clientWidth * 0.75, 280); 
+    canvas.width = wrapper.clientWidth; 
+    canvas.height = window.innerWidth >= 768 ? 450 : Math.max(wrapper.clientWidth * 0.75, 280); 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
+    // Funciones de seguridad internas para evitar crasheos por "undefined" o "NaN"
+    const safeNum = (val) => (val !== undefined && val !== null && !isNaN(val));
+    const safePrecision = (val, prec) => safeNum(val) ? val.toPrecision(prec) : "?";
+    const getSelectText = (id, def) => {
+        const el = document.getElementById(id);
+        return (el && el.options && el.selectedIndex >= 0) ? el.options[el.selectedIndex].text : def;
+    };
+    const getSelectVal = (id) => {
+        const el = document.getElementById(id);
+        return (el && el.value !== "" && !isNaN(parseFloat(el.value))) ? parseFloat(el.value) : 1;
+    };
+
     const origenX = canvas.width / 2; const origenY = 40; const longitudCuerda = canvas.height * 0.55; 
-    const direccionDesvio = (q * E >= 0) ? 1 : -1;
-    const thetaRad = theta * (Math.PI / 180) * direccionDesvio;
+    
+    let safeTheta = safeNum(theta) ? theta : 0;
+    let safeE = safeNum(E) ? E : 1; 
+    let safeQ = safeNum(q) ? q : 1;
+
+    const direccionDesvio = (safeQ * safeE >= 0) ? 1 : -1;
+    const thetaRad = safeTheta * (Math.PI / 180) * direccionDesvio;
     const px = origenX + longitudCuerda * Math.sin(thetaRad);
     const py = origenY + longitudCuerda * Math.cos(thetaRad);
     partX = px; partY = py;
 
-    ctx.fillStyle = E >= 0 ? 'rgba(220, 53, 69, 0.12)' : 'rgba(0, 86, 179, 0.12)'; ctx.fillRect(0, 0, 25, canvas.height);
-    ctx.fillStyle = E >= 0 ? 'rgba(0, 86, 179, 0.12)' : 'rgba(220, 53, 69, 0.12)'; ctx.fillRect(canvas.width - 25, 0, 25, canvas.height);
+    ctx.fillStyle = safeE >= 0 ? 'rgba(220, 53, 69, 0.12)' : 'rgba(0, 86, 179, 0.12)'; ctx.fillRect(0, 0, 25, canvas.height);
+    ctx.fillStyle = safeE >= 0 ? 'rgba(0, 86, 179, 0.12)' : 'rgba(220, 53, 69, 0.12)'; ctx.fillRect(canvas.width - 25, 0, 25, canvas.height);
     const isDark = document.body.getAttribute('data-theme') === 'dark';
-    ctx.fillStyle = E >= 0 ? '#ff6b6b' : '#4dabf7'; ctx.font = "bold 20px Arial"; ctx.textAlign = 'center'; ctx.fillText(E >= 0 ? "+" : "-", 12, canvas.height / 2 + 7);
-    ctx.fillStyle = E >= 0 ? '#4dabf7' : '#ff6b6b'; ctx.fillText(E >= 0 ? "-" : "+", canvas.width - 12, canvas.height / 2 + 7);
+    ctx.fillStyle = safeE >= 0 ? '#ff6b6b' : '#4dabf7'; ctx.font = "bold 20px Arial"; ctx.textAlign = 'center'; 
+    ctx.fillText(safeE >= 0 ? "+" : "-", 12, canvas.height / 2 + 7);
+    ctx.fillStyle = safeE >= 0 ? '#4dabf7' : '#ff6b6b'; 
+    ctx.fillText(safeE >= 0 ? "-" : "+", canvas.width - 12, canvas.height / 2 + 7);
 
     ctx.setLineDash([5, 5]); ctx.strokeStyle = isDark ? '#555' : '#aaa'; 
     ctx.beginPath(); ctx.moveTo(origenX, origenY); ctx.lineTo(origenX, canvas.height - 15); ctx.stroke();
     
-    if (Math.abs(theta) > 1) {
+    if (Math.abs(safeTheta) > 1) {
         ctx.beginPath(); let sA, eA, ac;
         if (direccionDesvio === 1) { sA = Math.PI/2 - thetaRad; eA = Math.PI/2; ac = false; } else { sA = Math.PI/2; eA = Math.PI/2 - thetaRad; ac = true; }
         ctx.arc(origenX, origenY, 50, sA, eA, ac); ctx.strokeStyle = '#007bff'; ctx.lineWidth = 2; ctx.stroke();
-        dibujarTextoFondo(ctx, `θ = ${theta.toFixed(1)}°`, origenX + (direccionDesvio * 20), origenY + 65, '#007bff');
+        dibujarTextoFondo(ctx, `θ = ${safeTheta.toFixed(1)}°`, origenX + (direccionDesvio * 20), origenY + 65, '#007bff');
     }
     ctx.setLineDash([]);
 
@@ -226,19 +257,21 @@ function dibujarDCL(theta, q, E, wVal, tVal, feVal, mVal) {
     ctx.lineWidth = 2; ctx.strokeStyle = isDark ? '#fff' : '#000'; ctx.beginPath(); ctx.moveTo(origenX, origenY); ctx.lineTo(px, py); ctx.stroke();
 
     const vecScale = canvas.height / 350;
-    dibujarFlecha(ctx, px, py, origenX, origenY, '#007bff', `T=${tVal.toPrecision(3)}N`, vecScale);
-    dibujarFlecha(ctx, px, py, px, py + 60 * vecScale, '#28a745', `W=${wVal.toPrecision(3)}N`, vecScale);
-    dibujarFlecha(ctx, px, py, px + (70 * vecScale * direccionDesvio), py, '#dc3545', `Fe=${feVal.toPrecision(3)}N`, vecScale);
+    dibujarFlecha(ctx, px, py, origenX, origenY, '#007bff', `T=${safePrecision(tVal, 3)}N`, vecScale);
+    dibujarFlecha(ctx, px, py, px, py + 60 * vecScale, '#28a745', `W=${safePrecision(wVal, 3)}N`, vecScale);
+    dibujarFlecha(ctx, px, py, px + (70 * vecScale * direccionDesvio), py, '#dc3545', `Fe=${safePrecision(feVal, 3)}N`, vecScale);
 
-    ctx.beginPath(); ctx.arc(px, py, 18, 0, Math.PI * 2); ctx.fillStyle = q >= 0 ? '#ff5722' : '#3f51b5'; ctx.fill();
+    ctx.beginPath(); ctx.arc(px, py, 18, 0, Math.PI * 2); ctx.fillStyle = (safeNum(q) && q >= 0) ? '#ff5722' : '#3f51b5'; ctx.fill();
     ctx.fillStyle = 'white'; ctx.textAlign = 'center'; ctx.font = "bold 11px Arial";
-    let qMostrar = (q / parseFloat(document.getElementById('unidad-carga').value)).toPrecision(3);
-    ctx.fillText(`${q > 0 ? '+' : ''}${qMostrar} ${document.getElementById('unidad-carga').options[document.getElementById('unidad-carga').selectedIndex].text}`, px, py + 4);
     
-    let mMostrar = (mVal / parseFloat(document.getElementById('unidad-masa').value)).toPrecision(3);
-    ctx.fillStyle = isDark ? '#ccc' : '#555'; ctx.font = "bold 12px Arial"; ctx.fillText(`m = ${mMostrar} ${document.getElementById('unidad-masa').options[document.getElementById('unidad-masa').selectedIndex].text}`, px, py + 35);
+    // Lectura segura de los textos de unidades
+    let qMostrar = safeNum(q) ? safePrecision(q / getSelectVal('unidad-carga'), 3) : "?";
+    ctx.fillText(`${(safeNum(q) && q > 0) ? '+' : ''}${qMostrar} ${getSelectText('unidad-carga', 'C')}`, px, py + 4);
+    
+    let mMostrar = safeNum(mVal) ? safePrecision(mVal / getSelectVal('unidad-masa'), 3) : "?";
+    ctx.fillStyle = isDark ? '#ccc' : '#555'; ctx.font = "bold 12px Arial"; 
+    ctx.fillText(`m = ${mMostrar} ${getSelectText('unidad-masa', 'kg')}`, px, py + 35);
 }
-
 // =========================================================
 // MÓDULO 3: CINEMÁTICA (TIRO PARABÓLICO PASO A PASO)
 // =========================================================
